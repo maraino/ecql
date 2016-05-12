@@ -23,20 +23,6 @@ var (
 
 var registry = make(map[reflect.Type]Table)
 
-// Table contains the information of a table in cassandra.
-type Table struct {
-	Name      string
-	KeyColumn string
-	Columns   []Column
-}
-
-// Column contains the information of a column in a table required
-// to create a map for it.
-type Column struct {
-	Name     string
-	Position int
-}
-
 // Delete registry cleans the registry.
 // This would be mainly used in unit testing.
 func DeleteRegistry() {
