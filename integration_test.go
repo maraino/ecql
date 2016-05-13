@@ -45,6 +45,31 @@ func TestInsert(t *testing.T) {
 	assert.Equal(t, newTW, tw)
 }
 
+func TestDelete(t *testing.T) {
+	newTW := tweet{
+		ID:       gocql.TimeUUID(),
+		Timeline: "me",
+		Text:     "Here's a new tweet",
+	}
+
+	err := testSession.Insert(newTW)
+	assert.NoError(t, err)
+
+	var tw tweet
+	err = testSession.Select(&tw, newTW.ID)
+	assert.NoError(t, err)
+	assert.Equal(t, newTW, tw)
+
+	err = testSession.Delete(tw)
+	assert.NoError(t, err)
+	assert.Equal(t, newTW, tw)
+
+	var tww tweet
+	err = testSession.Select(&tww, newTW.ID)
+	assert.Error(t, gocql.ErrNotFound)
+	assert.Zero(t, tww)
+}
+
 func TestMain(m *testing.M) {
 	flag.Parse()
 

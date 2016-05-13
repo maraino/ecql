@@ -45,8 +45,7 @@ func (t *Table) BuildQuery(qt queryType) (string, error) {
 	case insertQuery:
 		cql = fmt.Sprintf(CQL_INSERT, t.Name, t.getCols(), t.getQms())
 	case deleteQuery:
-		cql = CQL_DELETE
-		return "", ErrInvalidQueryType
+		cql = fmt.Sprintf(CQL_DELETE, t.Name, t.KeyColumn)
 	case updateQuery:
 		cql = CQL_UPDATE
 		return "", ErrInvalidQueryType

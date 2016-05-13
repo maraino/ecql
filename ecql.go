@@ -30,7 +30,7 @@ func (s *Session) Select(i interface{}, key interface{}) error {
 	}
 }
 
-// Insert executes and insert statement on the the table defined in i and
+// Insert executes an insert statement on the the table defined in i and
 // saves the information of i in the dtabase.
 func (s *Session) Insert(i interface{}) error {
 	v, table := BindTable(i)
@@ -38,5 +38,17 @@ func (s *Session) Insert(i interface{}) error {
 		return err
 	} else {
 		return s.Query(cql, v...).Exec()
+	}
+}
+
+// Delete extecutes a delete statement on the table defined in i to
+// remove the object i from the database.
+func (s *Session) Delete(i interface{}) error {
+	m, table := MapTable(i)
+	if cql, err := table.BuildQuery(deleteQuery); err != nil {
+		return err
+	} else {
+		key := m[table.KeyColumn]
+		return s.Query(cql, key).Exec()
 	}
 }
