@@ -21,7 +21,7 @@ type Statement struct {
 	session    *Session
 	Command    Command
 	Table      Table
-	Conditions []Condition
+	Condition  *Condition
 	LimitValue int
 	TTLValue   int
 	mapping    map[string]interface{}
@@ -75,25 +75,10 @@ func (s *Statement) query() (*gocql.Query, error) {
 
 	var args []interface{}
 
-	if len(s.Conditions) > 0 {
-		cql = append(cql, "WHERE")
-		for _, cond := range s.Conditions {
-			args = append(args, cond.Value)
-			switch cond.Predicate {
-			case EqPredicate:
-				cql = append(cql, fmt.Sprintf("%s = ?", cond.Column))
-			case GtPredicate:
-				cql = append(cql, fmt.Sprintf("%s > ?", cond.Column))
-			case GePredicate:
-				cql = append(cql, fmt.Sprintf("%s >= ?", cond.Column))
-			case LtPredicate:
-				cql = append(cql, fmt.Sprintf("%s < ?", cond.Column))
-			case LePredicate:
-				cql = append(cql, fmt.Sprintf("%s <= ?", cond.Column))
-			case InPredicate:
-				cql = append(cql, fmt.Sprintf("%s IN (%s)", qms(len(cond.Values)), cond.Column))
-			}
-		}
+	if s.Condition != nil {
+		cql = append(cql, s.Condition.CQLFragment)
+		args = append(args, s.Condition.Values)
+
 	}
 
 	if len(s.values) > 0 {
@@ -120,8 +105,17 @@ func (s *Statement) FromType(i interface{}) *Statement {
 	return s.From(table.Name)
 }
 
+// Where Conditions are implicitly And with each other
 func (s *Statement) Where(cond ...Condition) *Statement {
-	s.Conditions = cond
+	for _, c := range cond {
+		if s.Condition == nil {
+			s.Condition = &c
+		} else {
+			and := And(*s.Condition, c)
+			s.Condition = &and
+		}
+	}
+
 	return s
 }
 

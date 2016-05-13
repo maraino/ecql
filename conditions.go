@@ -1,43 +1,55 @@
 package ecql
 
+import "fmt"
+
 type PredicateType int
 
-const (
-	EqPredicate PredicateType = iota
-	GtPredicate
-	GePredicate
-	LtPredicate
-	LePredicate
-	InPredicate
-)
-
 type Condition struct {
-	Column    string
-	Predicate PredicateType
-	Value     interface{}
-	Values    []interface{}
+	CQLFragment string
+	Values      []interface{}
+}
+
+func And(lhs Condition, rhs Condition) Condition {
+	return Condition{CQLFragment: fmt.Sprintf("(%s AND %s)", lhs.CQLFragment, rhs.CQLFragment),
+		Values: append(lhs.Values, rhs.Values)}
+}
+
+func Or(lhs Condition, rhs Condition) Condition {
+	return Condition{CQLFragment: fmt.Sprintf("(%s OR %s)", lhs.CQLFragment, rhs.CQLFragment),
+		Values: append(lhs.Values, rhs.Values)}
+}
+
+func NEq(col string, v interface{}) Condition {
+	return Condition{CQLFragment: fmt.Sprintf("%s != ?", col),
+		Values: []interface{}{v}}
 }
 
 func Eq(col string, v interface{}) Condition {
-	return Condition{col, EqPredicate, v, nil}
+	return Condition{CQLFragment: fmt.Sprintf("%s = ?", col),
+		Values: []interface{}{v}}
 }
 
 func Gt(col string, v interface{}) Condition {
-	return Condition{col, GtPredicate, v, nil}
+	return Condition{CQLFragment: fmt.Sprintf("%s > ?", col),
+		Values: []interface{}{v}}
 }
 
 func Ge(col string, v interface{}) Condition {
-	return Condition{col, GePredicate, v, nil}
+	return Condition{CQLFragment: fmt.Sprintf("%s >= ?", col),
+		Values: []interface{}{v}}
 }
 
 func Lt(col string, v interface{}) Condition {
-	return Condition{col, LtPredicate, v, nil}
+	return Condition{CQLFragment: fmt.Sprintf("%s < ?", col),
+		Values: []interface{}{v}}
 }
 
 func Le(col string, v interface{}) Condition {
-	return Condition{col, LePredicate, v, nil}
+	return Condition{CQLFragment: fmt.Sprintf("%s <= ?", col),
+		Values: []interface{}{v}}
 }
 
 func In(col string, v ...interface{}) Condition {
-	return Condition{col, EqPredicate, nil, v}
+	return Condition{CQLFragment: fmt.Sprintf("%s IN (%s)", qms(len(v)), col),
+		Values: v}
 }
