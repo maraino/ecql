@@ -139,6 +139,20 @@ func TestInsert(t *testing.T) {
 	tw = tweet{}
 	testSession.Select(&tw).Where(Eq("id", newTW.ID)).TypeScan()
 	assert.Equal(t, newTW, tw)
+
+	newTW.ID = gocql.TimeUUID()
+	err = testSession.Insert(newTW).TTL(2).Exec()
+	assert.NoError(t, err)
+
+	tw = tweet{}
+	err = testSession.Select(&tw).Where(Eq("id", newTW.ID)).TypeScan()
+	assert.NoError(t, err)
+	assert.Equal(t, newTW, tw)
+
+	time.Sleep(2 * time.Second)
+	tw = tweet{}
+	err = testSession.Select(&tw).Where(Eq("id", newTW.ID)).TypeScan()
+	assert.Equal(t, gocql.ErrNotFound, err)
 }
 
 func TestDelete(t *testing.T) {
