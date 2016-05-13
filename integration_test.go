@@ -20,7 +20,24 @@ type tweet struct {
 	Text     string     `cql:"text"`
 }
 
+func initialize(t *testing.T) {
+	sess := testSession.Session
+	for _, stmt := range []string{
+		"TRUNCATE tweet",
+		"INSERT INTO tweet (id, timeline, text) VALUES (a5450908-17d7-11e6-b9ec-542696d5770f, 'ecql', 'hello world!')",
+		"INSERT INTO tweet (id, timeline, text) VALUES (619f33d2-1952-11e6-9f53-542696d5770f, 'ecql', 'ciao world!')",
+	} {
+		if err := sess.Query(stmt).Exec(); err != nil {
+			fmt.Fprintf(os.Stderr, "Error initializing test_ecql: %s", err.Error())
+			fmt.Fprintf(os.Stderr, "Query: %s", stmt)
+			t.FailNow()
+		}
+	}
+}
+
 func TestSelect(t *testing.T) {
+	initialize(t)
+
 	var tw tweet
 	err := testSession.Get(&tw, "a5450908-17d7-11e6-b9ec-542696d5770f")
 	assert.NoError(t, err)
@@ -37,6 +54,8 @@ func TestSelect(t *testing.T) {
 }
 
 func TestInsert(t *testing.T) {
+	initialize(t)
+
 	newTW := tweet{
 		ID:       gocql.TimeUUID(),
 		Timeline: "me",
@@ -61,6 +80,8 @@ func TestInsert(t *testing.T) {
 }
 
 func TestDelete(t *testing.T) {
+	initialize(t)
+
 	newTW := tweet{
 		ID:       gocql.TimeUUID(),
 		Timeline: "me",
@@ -104,22 +125,17 @@ func TestDelete(t *testing.T) {
 	assert.Zero(t, tww)
 }
 
-func TestStatement(t *testing.T) {
-	var tw tweet
-	err := testSession.Select(&tw).Where(Eq("id", "a5450908-17d7-11e6-b9ec-542696d5770f")).TypeScan()
-	assert.NoError(t, err)
-	assert.Equal(t, "a5450908-17d7-11e6-b9ec-542696d5770f", tw.ID.String())
-	assert.Equal(t, "ecql", tw.Timeline)
-	assert.Equal(t, "hello world!", tw.Text)
+func TestCount(t *testing.T) {
+	initialize(t)
 
 	var count int
-	err = testSession.Count(&tw).Where(Eq("id", "a5450908-17d7-11e6-b9ec-542696d5770f")).Scan(&count)
+	err := testSession.Count(tweet{}).Scan(&count)
+	assert.NoError(t, err)
+	assert.Equal(t, 2, count)
+
+	err = testSession.Count(&tweet{}).Where(Eq("id", "a5450908-17d7-11e6-b9ec-542696d5770f")).Scan(&count)
 	assert.NoError(t, err)
 	assert.Equal(t, 1, count)
-
-	err = testSession.Count(&tw).Scan(&count)
-	assert.NoError(t, err)
-	assert.Equal(t, 3, count)
 }
 
 func TestMain(m *testing.M) {
@@ -160,7 +176,6 @@ func TestMain(m *testing.M) {
 	// Create test tables
 	for _, stmt := range []string{
 		"CREATE TABLE tweet (id uuid PRIMARY KEY, timeline text, text text)",
-		"INSERT INTO tweet (id, timeline, text) VALUES (a5450908-17d7-11e6-b9ec-542696d5770f, 'ecql', 'hello world!')",
 	} {
 		if err := sess2.Query(stmt).Exec(); err != nil {
 			fmt.Fprintf(os.Stderr, "Error initializing test_ecql: %s", err.Error())
