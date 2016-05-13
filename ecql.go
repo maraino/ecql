@@ -19,9 +19,9 @@ func NewSession(cfg gocql.ClusterConfig) (*Session, error) {
 	}, nil
 }
 
-// Select executes a select statements on the table defined in i and sets the
+// Get executes a SELECT statements on the table defined in i and sets the
 // fields on i with the information present in the database.
-func (s *Session) Select(i interface{}, key interface{}) error {
+func (s *Session) Get(i interface{}, key interface{}) error {
 	m, table := MapTable(i)
 	if cql, err := table.BuildQuery(selectQuery); err != nil {
 		return err
@@ -30,9 +30,9 @@ func (s *Session) Select(i interface{}, key interface{}) error {
 	}
 }
 
-// Insert executes an insert statement on the the table defined in i and
+// Set executes an INSERT statement on the the table defined in i and
 // saves the information of i in the dtabase.
-func (s *Session) Insert(i interface{}) error {
+func (s *Session) Set(i interface{}) error {
 	v, table := BindTable(i)
 	if cql, err := table.BuildQuery(insertQuery); err != nil {
 		return err
@@ -41,9 +41,9 @@ func (s *Session) Insert(i interface{}) error {
 	}
 }
 
-// Delete extecutes a delete statement on the table defined in i to
+// Del extecutes a delete statement on the table defined in i to
 // remove the object i from the database.
-func (s *Session) Delete(i interface{}) error {
+func (s *Session) Del(i interface{}) error {
 	m, table := MapTable(i)
 	if cql, err := table.BuildQuery(deleteQuery); err != nil {
 		return err
@@ -51,4 +51,24 @@ func (s *Session) Delete(i interface{}) error {
 		key := m[table.KeyColumn]
 		return s.Query(cql, key).Exec()
 	}
+}
+
+// Select initializes a SELECT statement.
+func (s *Session) Select() *Statement {
+	return NewStatement(s).Do(SelectCmd)
+}
+
+// Select initializes an Insert statement.
+func (s *Session) Insert(i interface{}) *Statement {
+	return NewStatement(s).Do(InsertCmd).Bind(i)
+}
+
+// Select initializes an Insert statement.
+func (s *Session) Delete(i interface{}) *Statement {
+	return NewStatement(s).Do(DeleteCmd).FromType(i)
+}
+
+// Count initializes a SELECT COUNT(1) statement from the table defined by i.
+func (s *Session) Count(i interface{}) *Statement {
+	return NewStatement(s).Do(CountCmd).FromType(i)
 }

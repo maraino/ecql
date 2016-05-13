@@ -71,7 +71,6 @@ func MapTable(i interface{}) (map[string]interface{}, Table) {
 	// Get the table or register on the fly if necessary
 	table, ok := registry[t]
 	if !ok {
-		// table = register(i)
 		table = register(i)
 	}
 
@@ -102,7 +101,6 @@ func BindTable(i interface{}) ([]interface{}, Table) {
 	// Get the table or register on the fly if necessary
 	table, ok := registry[t]
 	if !ok {
-		// table = register(i)
 		table = register(i)
 	}
 
@@ -112,6 +110,20 @@ func BindTable(i interface{}) ([]interface{}, Table) {
 		columns[i] = field.Interface()
 	}
 	return columns, table
+}
+
+// GetTable returns the Table with the information about the type of i.
+func GetTable(i interface{}) Table {
+	v := structOf(i)
+	t := v.Type()
+
+	// Get the table or register on the fly if necessary
+	table, ok := registry[t]
+	if !ok {
+		table = register(i)
+	}
+
+	return table
 }
 
 func structOf(i interface{}) reflect.Value {

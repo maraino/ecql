@@ -22,7 +22,14 @@ type tweet struct {
 
 func TestSelect(t *testing.T) {
 	var tw tweet
-	err := testSession.Select(&tw, "a5450908-17d7-11e6-b9ec-542696d5770f")
+	err := testSession.Get(&tw, "a5450908-17d7-11e6-b9ec-542696d5770f")
+	assert.NoError(t, err)
+	assert.Equal(t, "a5450908-17d7-11e6-b9ec-542696d5770f", tw.ID.String())
+	assert.Equal(t, "ecql", tw.Timeline)
+	assert.Equal(t, "hello world!", tw.Text)
+
+	tw = tweet{}
+	err = testSession.Select().Where(Eq("id", "a5450908-17d7-11e6-b9ec-542696d5770f")).TypeScan(&tw)
 	assert.NoError(t, err)
 	assert.Equal(t, "a5450908-17d7-11e6-b9ec-542696d5770f", tw.ID.String())
 	assert.Equal(t, "ecql", tw.Timeline)
@@ -36,12 +43,20 @@ func TestInsert(t *testing.T) {
 		Text:     "Here's a new tweet",
 	}
 
-	err := testSession.Insert(newTW)
+	err := testSession.Set(newTW)
 	assert.NoError(t, err)
 
 	var tw tweet
-	err = testSession.Select(&tw, newTW.ID)
+	err = testSession.Get(&tw, newTW.ID)
 	assert.NoError(t, err)
+	assert.Equal(t, newTW, tw)
+
+	newTW.ID = gocql.TimeUUID()
+	err = testSession.Insert(newTW).Exec()
+	assert.NoError(t, err)
+
+	tw = tweet{}
+	testSession.Select().Where(Eq("id", newTW.ID)).TypeScan(&tw)
 	assert.Equal(t, newTW, tw)
 }
 
@@ -52,22 +67,63 @@ func TestDelete(t *testing.T) {
 		Text:     "Here's a new tweet",
 	}
 
-	err := testSession.Insert(newTW)
+	// With Set/Del
+	err := testSession.Set(newTW)
 	assert.NoError(t, err)
 
 	var tw tweet
-	err = testSession.Select(&tw, newTW.ID)
+	err = testSession.Get(&tw, newTW.ID)
 	assert.NoError(t, err)
 	assert.Equal(t, newTW, tw)
 
-	err = testSession.Delete(tw)
+	err = testSession.Del(tw)
 	assert.NoError(t, err)
 	assert.Equal(t, newTW, tw)
 
 	var tww tweet
-	err = testSession.Select(&tww, newTW.ID)
+	err = testSession.Get(&tww, newTW.ID)
 	assert.Error(t, gocql.ErrNotFound)
 	assert.Zero(t, tww)
+
+	// With Insert/Delete
+	tw = tweet{}
+	tww = tweet{}
+	err = testSession.Insert(newTW).Exec()
+	assert.NoError(t, err)
+
+	err = testSession.Select().Where(Eq("id", newTW.ID)).TypeScan(&tw)
+	assert.NoError(t, err)
+	assert.Equal(t, newTW, tw)
+
+	err = testSession.Delete(tw).Where(Eq("id", newTW.ID)).Exec()
+	assert.NoError(t, err)
+	assert.Equal(t, newTW, tw)
+
+	err = testSession.Select().Where(Eq("id", newTW.ID)).TypeScan(&tww)
+	assert.Error(t, gocql.ErrNotFound)
+	assert.Zero(t, tww)
+}
+
+func TestStatement(t *testing.T) {
+	var tw tweet
+	err := testSession.Select().
+		Where(Eq("id", "a5450908-17d7-11e6-b9ec-542696d5770f")).
+		TypeScan(&tw)
+	assert.NoError(t, err)
+	assert.Equal(t, "a5450908-17d7-11e6-b9ec-542696d5770f", tw.ID.String())
+	assert.Equal(t, "ecql", tw.Timeline)
+	assert.Equal(t, "hello world!", tw.Text)
+
+	var count int
+	err = testSession.Count(&tw).
+		Where(Eq("id", "a5450908-17d7-11e6-b9ec-542696d5770f")).
+		Scan(&count)
+	assert.NoError(t, err)
+	assert.Equal(t, 1, count)
+
+	err = testSession.Count(&tw).Scan(&count)
+	assert.NoError(t, err)
+	assert.Equal(t, 3, count)
 }
 
 func TestMain(m *testing.M) {

@@ -65,13 +65,5 @@ func (t *Table) getCols() string {
 }
 
 func (t *Table) getQms() string {
-	l := len(t.Columns)
-	switch l {
-	case 0:
-		return ""
-	case 1:
-		return "?"
-	default:
-		return strings.Repeat("?,", l-1) + "?"
-	}
+	return qms(len(t.Columns))
 }

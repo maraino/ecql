@@ -126,6 +126,19 @@ func TestBind(t *testing.T) {
 	assert.Equal(t, exp, m)
 }
 
+func TestGetTable(t *testing.T) {
+	DeleteRegistry()
+	// With registry and passing as a value
+	Register(testStruct{})
+	table := GetTable(testStruct{})
+	assert.Equal(t, "mytable", table.Name)
+
+	// Without registry and passing as a reference
+	DeleteRegistry()
+	table = GetTable(testStruct{})
+	assert.Equal(t, "mytable", table.Name)
+}
+
 func TestStructOfPanic1(t *testing.T) {
 	defer func() {
 		if r := recover(); r == nil {
