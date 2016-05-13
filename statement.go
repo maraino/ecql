@@ -22,6 +22,7 @@ type Statement struct {
 	Command    Command
 	Table      Table
 	Conditions []Condition
+	Orders     []OrderBy
 	LimitValue int
 	TTLValue   int
 	mapping    map[string]interface{}
@@ -56,16 +57,26 @@ func (s *Statement) Exec() error {
 	}
 }
 
+func (s *Statement) Iter() *Iter {
+	return &Iter{
+		statement: s,
+	}
+}
+
 func (s *Statement) query() (*gocql.Query, error) {
 	var cql []string
+	supportsTTL := false
+
 	switch s.Command {
 	case SelectCmd:
 		cql = append(cql, fmt.Sprintf("SELECT * FROM %s", s.Table.Name))
 	case InsertCmd:
+		supportsTTL = true
 		cql = append(cql, fmt.Sprintf("INSERT INTO %s (%s) VALUES (%s)", s.Table.Name, s.Table.getCols(), s.Table.getQms()))
 	case DeleteCmd:
 		cql = append(cql, fmt.Sprintf("DELETE FROM %s", s.Table.Name))
 	// case UpdateCmd:
+	//  supportsTTL = true
 	// 	cql = append(cql, fmt.Sprintf("UPDATE %s", s.Table))
 	case CountCmd:
 		cql = append(cql, fmt.Sprintf("SELECT COUNT(1) FROM %s", s.Table.Name))
@@ -102,6 +113,25 @@ func (s *Statement) query() (*gocql.Query, error) {
 		}
 	}
 
+	if s.Command == SelectCmd {
+		if len(s.Orders) > 0 {
+			cql = append(cql, "ORDER BY")
+			orders := make([]string, len(s.Orders))
+			for i, o := range s.Orders {
+				orders[i] = fmt.Sprintf("%s %s", o.Column, o.OrderType)
+			}
+			cql = append(cql, strings.Join(orders, ", "))
+		}
+
+		if s.LimitValue > 0 {
+			cql = append(cql, fmt.Sprintf("LIMIT %d", s.LimitValue))
+		}
+	}
+
+	if supportsTTL && s.TTLValue > 0 {
+		cql = append(cql, fmt.Sprintf("USING TTL %d", s.TTLValue))
+	}
+
 	return s.session.Query(strings.Join(cql, " "), args...), nil
 }
 
@@ -122,6 +152,11 @@ func (s *Statement) FromType(i interface{}) *Statement {
 
 func (s *Statement) Where(cond ...Condition) *Statement {
 	s.Conditions = cond
+	return s
+}
+
+func (s *Statement) OrderBy(order ...OrderBy) *Statement {
+	s.Orders = order
 	return s
 }
 

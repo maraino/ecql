@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"os"
 	"testing"
+	"time"
 
 	"github.com/gocql/gocql"
 	"github.com/stretchr/testify/assert"
@@ -18,14 +19,23 @@ type tweet struct {
 	ID       gocql.UUID `cql:"id" cqltable:"tweet" cqlkey:"id"`
 	Timeline string     `cql:"timeline"`
 	Text     string     `cql:"text"`
+	Time     time.Time  `cql:"time"`
+}
+
+type timeline struct {
+	ID    string     `cql:"id" cqltable:"timeline" cqlkey:"id"`
+	Time  time.Time  `cql:"time"`
+	Tweet gocql.UUID `cql:"tweet"`
 }
 
 func initialize(t *testing.T) {
 	sess := testSession.Session
 	for _, stmt := range []string{
 		"TRUNCATE tweet",
-		"INSERT INTO tweet (id, timeline, text) VALUES (a5450908-17d7-11e6-b9ec-542696d5770f, 'ecql', 'hello world!')",
-		"INSERT INTO tweet (id, timeline, text) VALUES (619f33d2-1952-11e6-9f53-542696d5770f, 'ecql', 'ciao world!')",
+		"INSERT INTO tweet (id, timeline, text, time) VALUES (a5450908-17d7-11e6-b9ec-542696d5770f, 'ecql', 'hello world!', '2016-01-01 00:00:00')",
+		"INSERT INTO tweet (id, timeline, text, time) VALUES (619f33d2-1952-11e6-9f53-542696d5770f, 'ecql', 'ciao world!', '2016-01-01 11:11:11')",
+		"INSERT INTO timeline (id, time, tweet) VALUES ('ecql', '2016-01-01 00:00:00', a5450908-17d7-11e6-b9ec-542696d5770f)",
+		"INSERT INTO timeline (id, time, tweet) VALUES ('ecql', '2016-01-01 11:11:11', 619f33d2-1952-11e6-9f53-542696d5770f)",
 	} {
 		if err := sess.Query(stmt).Exec(); err != nil {
 			fmt.Fprintf(os.Stderr, "Error initializing test_ecql: %s", err.Error())
@@ -51,6 +61,57 @@ func TestSelect(t *testing.T) {
 	assert.Equal(t, "a5450908-17d7-11e6-b9ec-542696d5770f", tw.ID.String())
 	assert.Equal(t, "ecql", tw.Timeline)
 	assert.Equal(t, "hello world!", tw.Text)
+
+	var tl timeline
+	i := 0
+	iter := testSession.Select(&tl).Where(Eq("id", "ecql")).OrderBy(Asc("time")).Iter()
+	for iter.TypeScan(&tl) {
+		assert.Equal(t, "ecql", tl.ID)
+		switch i {
+		case 0:
+			assert.Equal(t, "a5450908-17d7-11e6-b9ec-542696d5770f", tl.Tweet.String())
+		case 1:
+			assert.Equal(t, "619f33d2-1952-11e6-9f53-542696d5770f", tl.Tweet.String())
+		}
+		i++
+	}
+	assert.NoError(t, iter.Close())
+
+	i = 0
+	iter = testSession.Select(&tl).Where(Eq("id", "ecql")).OrderBy(Desc("time")).Iter()
+	for iter.TypeScan(&tl) {
+		assert.Equal(t, "ecql", tl.ID)
+		switch i {
+		case 0:
+			assert.Equal(t, "619f33d2-1952-11e6-9f53-542696d5770f", tl.Tweet.String())
+		case 1:
+			assert.Equal(t, "a5450908-17d7-11e6-b9ec-542696d5770f", tl.Tweet.String())
+		}
+		i++
+	}
+	assert.NoError(t, iter.Close())
+
+	iter = testSession.Select(&tl).Where(Eq("id", "ecql")).OrderBy(Asc("time")).Limit(1).Iter()
+	assert.True(t, iter.TypeScan(&tl))
+	assert.Equal(t, "a5450908-17d7-11e6-b9ec-542696d5770f", tl.Tweet.String())
+	assert.False(t, iter.TypeScan(&tl))
+	assert.NoError(t, iter.Close())
+
+	iter = testSession.Select(&tl).Where(Eq("id", "ecql")).OrderBy(Desc("time")).Limit(1).Iter()
+	assert.True(t, iter.TypeScan(&tl))
+	assert.Equal(t, "619f33d2-1952-11e6-9f53-542696d5770f", tl.Tweet.String())
+	assert.False(t, iter.TypeScan(&tl))
+	assert.NoError(t, iter.Close())
+
+	err = testSession.Select(&tl).Where(Eq("id", "ecql")).OrderBy(Asc("time")).Limit(1).TypeScan()
+	assert.NoError(t, err)
+	assert.Equal(t, "ecql", tl.ID)
+	assert.Equal(t, "a5450908-17d7-11e6-b9ec-542696d5770f", tl.Tweet.String())
+
+	err = testSession.Select(&tl).Where(Eq("id", "ecql")).OrderBy(Desc("time")).Limit(1).TypeScan()
+	assert.NoError(t, err)
+	assert.Equal(t, "ecql", tl.ID)
+	assert.Equal(t, "619f33d2-1952-11e6-9f53-542696d5770f", tl.Tweet.String())
 }
 
 func TestInsert(t *testing.T) {
@@ -60,6 +121,7 @@ func TestInsert(t *testing.T) {
 		ID:       gocql.TimeUUID(),
 		Timeline: "me",
 		Text:     "Here's a new tweet",
+		Time:     time.Now().Round(time.Millisecond).UTC(),
 	}
 
 	err := testSession.Set(newTW)
@@ -86,6 +148,7 @@ func TestDelete(t *testing.T) {
 		ID:       gocql.TimeUUID(),
 		Timeline: "me",
 		Text:     "Here's a new tweet",
+		Time:     time.Now().Round(time.Millisecond).UTC(),
 	}
 
 	// With Set/Del
@@ -175,7 +238,8 @@ func TestMain(m *testing.M) {
 
 	// Create test tables
 	for _, stmt := range []string{
-		"CREATE TABLE tweet (id uuid PRIMARY KEY, timeline text, text text)",
+		"CREATE TABLE tweet (id uuid PRIMARY KEY, timeline text, text text, time timestamp)",
+		"CREATE TABLE timeline (id text, time timestamp, tweet uuid, PRIMARY KEY(id, time))",
 	} {
 		if err := sess2.Query(stmt).Exec(); err != nil {
 			fmt.Fprintf(os.Stderr, "Error initializing test_ecql: %s", err.Error())
