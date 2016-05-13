@@ -2,14 +2,6 @@ package ecql
 
 import "github.com/gocql/gocql"
 
-const (
-	CQL_SELECT = "SELECT * FROM %s WHERE %s = ?"
-	CQL_INSERT = "INSERT INTO %s (%s) VALUES (%s)"
-	CQL_DELETE = "DELETE FROM %s WHERE %s = ?"
-	CQL_UPDATE = "UPDATE %s WHERE %s = ?"
-	CQL_AND    = "AND %s = ?"
-)
-
 // Session is the interfaced used by users to interact with the database.
 type Session struct {
 	*gocql.Session
@@ -34,7 +26,17 @@ func (s *Session) Select(i interface{}, key interface{}) error {
 	if cql, err := table.BuildQuery(selectQuery); err != nil {
 		return err
 	} else {
-		query := s.Query(cql, key)
-		return query.MapScan(m)
+		return s.Query(cql, key).MapScan(m)
+	}
+}
+
+// Insert executes and insert statement on the the table defined in i and
+// saves the information of i in the dtabase.
+func (s *Session) Insert(i interface{}) error {
+	v, table := BindTable(i)
+	if cql, err := table.BuildQuery(insertQuery); err != nil {
+		return err
+	} else {
+		return s.Query(cql, v...).Exec()
 	}
 }

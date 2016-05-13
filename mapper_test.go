@@ -100,6 +100,32 @@ func TestMap(t *testing.T) {
 	assert.Equal(t, exp, ts)
 }
 
+func TestBind(t *testing.T) {
+	DeleteRegistry()
+
+	s1 := "string-1"
+	ts := testStruct{
+		F1: "foo",
+		F2: 123,
+		F3: map[string]string{"foo": "bar"},
+		F4: &s1,
+		F5: "zar",
+	}
+
+	s2 := "string-1"
+	exp := []interface{}{"foo", 123, map[string]string{"foo": "bar"}, &s2}
+
+	// With registry and passing as a value
+	Register(testStruct{})
+	m := Bind(ts)
+	assert.Equal(t, exp, m)
+
+	// Without registry and passing as a reference
+	DeleteRegistry()
+	m = Bind(&ts)
+	assert.Equal(t, exp, m)
+}
+
 func TestStructOfPanic1(t *testing.T) {
 	defer func() {
 		if r := recover(); r == nil {

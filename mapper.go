@@ -87,6 +87,33 @@ func MapTable(i interface{}) (map[string]interface{}, Table) {
 	return columns, table
 }
 
+// Bind returns the values of i to bind in insert queries.
+func Bind(i interface{}) []interface{} {
+	columns, _ := BindTable(i)
+	return columns
+}
+
+// BindTables returns the values of i to bind in insert queries and the Table
+// with the information about the type.
+func BindTable(i interface{}) ([]interface{}, Table) {
+	v := structOf(i)
+	t := v.Type()
+
+	// Get the table or register on the fly if necessary
+	table, ok := registry[t]
+	if !ok {
+		// table = register(i)
+		table = register(i)
+	}
+
+	columns := make([]interface{}, len(table.Columns))
+	for i, col := range table.Columns {
+		field := v.Field(col.Position)
+		columns[i] = field.Interface()
+	}
+	return columns, table
+}
+
 func structOf(i interface{}) reflect.Value {
 	v := reflect.ValueOf(i)
 	switch v.Kind() {

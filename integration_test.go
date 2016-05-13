@@ -8,9 +8,8 @@ import (
 	"os"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
-
 	"github.com/gocql/gocql"
+	"github.com/stretchr/testify/assert"
 )
 
 var testSession *Session
@@ -23,10 +22,27 @@ type tweet struct {
 
 func TestSelect(t *testing.T) {
 	var tw tweet
-	testSession.Select(&tw, "a5450908-17d7-11e6-b9ec-542696d5770f")
+	err := testSession.Select(&tw, "a5450908-17d7-11e6-b9ec-542696d5770f")
+	assert.NoError(t, err)
 	assert.Equal(t, "a5450908-17d7-11e6-b9ec-542696d5770f", tw.ID.String())
 	assert.Equal(t, "ecql", tw.Timeline)
 	assert.Equal(t, "hello world!", tw.Text)
+}
+
+func TestInsert(t *testing.T) {
+	newTW := tweet{
+		ID:       gocql.TimeUUID(),
+		Timeline: "me",
+		Text:     "Here's a new tweet",
+	}
+
+	err := testSession.Insert(newTW)
+	assert.NoError(t, err)
+
+	var tw tweet
+	err = testSession.Select(&tw, newTW.ID)
+	assert.NoError(t, err)
+	assert.Equal(t, newTW, tw)
 }
 
 func TestMain(m *testing.M) {
