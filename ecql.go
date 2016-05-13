@@ -54,8 +54,8 @@ func (s *Session) Del(i interface{}) error {
 }
 
 // Select initializes a SELECT statement.
-func (s *Session) Select() *Statement {
-	return NewStatement(s).Do(SelectCmd)
+func (s *Session) Select(i interface{}) *Statement {
+	return NewStatement(s).Do(SelectCmd).Map(i)
 }
 
 // Select initializes an Insert statement.

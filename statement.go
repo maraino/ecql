@@ -20,25 +20,23 @@ const (
 type Statement struct {
 	session    *Session
 	Command    Command
-	Table      string
+	Table      Table
 	Conditions []Condition
-	Values     []interface{}
 	LimitValue int
 	TTLValue   int
-	table      Table
+	mapping    map[string]interface{}
+	values     []interface{}
 }
 
 func NewStatement(sess *Session) *Statement {
 	return &Statement{session: sess}
 }
 
-func (s *Statement) TypeScan(i interface{}) error {
-	m, table := MapTable(i)
-	s.Table = table.Name
+func (s *Statement) TypeScan() error {
 	if query, err := s.query(); err != nil {
 		return err
 	} else {
-		return query.MapScan(m)
+		return query.MapScan(s.mapping)
 	}
 }
 
@@ -62,15 +60,15 @@ func (s *Statement) query() (*gocql.Query, error) {
 	var cql []string
 	switch s.Command {
 	case SelectCmd:
-		cql = append(cql, fmt.Sprintf("SELECT * FROM %s", s.Table))
+		cql = append(cql, fmt.Sprintf("SELECT * FROM %s", s.Table.Name))
 	case InsertCmd:
-		cql = append(cql, fmt.Sprintf("INSERT INTO %s (%s) VALUES (%s)", s.Table, s.table.getCols(), s.table.getQms()))
+		cql = append(cql, fmt.Sprintf("INSERT INTO %s (%s) VALUES (%s)", s.Table.Name, s.Table.getCols(), s.Table.getQms()))
 	case DeleteCmd:
-		cql = append(cql, fmt.Sprintf("DELETE FROM %s", s.Table))
+		cql = append(cql, fmt.Sprintf("DELETE FROM %s", s.Table.Name))
 	// case UpdateCmd:
 	// 	cql = append(cql, fmt.Sprintf("UPDATE %s", s.Table))
 	case CountCmd:
-		cql = append(cql, fmt.Sprintf("SELECT COUNT(1) FROM %s", s.Table))
+		cql = append(cql, fmt.Sprintf("SELECT COUNT(1) FROM %s", s.Table.Name))
 	default:
 		return nil, ErrInvalidCommand
 	}
@@ -92,20 +90,18 @@ func (s *Statement) query() (*gocql.Query, error) {
 				cql = append(cql, fmt.Sprintf("%s < ?", cond.Column))
 			case LePredicate:
 				cql = append(cql, fmt.Sprintf("%s <= ?", cond.Column))
-			// FIXME
 			case InPredicate:
 				cql = append(cql, fmt.Sprintf("%s IN (%s)", qms(len(cond.Values)), cond.Column))
 			}
 		}
 	}
 
-	if len(s.Values) > 0 {
-		for i := range s.Values {
-			args = append(args, s.Values[i])
+	if len(s.values) > 0 {
+		for i := range s.values {
+			args = append(args, s.values[i])
 		}
 	}
 
-	fmt.Println(strings.Join(cql, " "), args, s.Values)
 	return s.session.Query(strings.Join(cql, " "), args...), nil
 }
 
@@ -115,7 +111,7 @@ func (s *Statement) Do(cmd Command) *Statement {
 }
 
 func (s *Statement) From(table string) *Statement {
-	s.Table = table
+	s.Table = Table{Name: table}
 	return s
 }
 
@@ -130,10 +126,12 @@ func (s *Statement) Where(cond ...Condition) *Statement {
 }
 
 func (s *Statement) Bind(i interface{}) *Statement {
-	v, table := BindTable(i)
-	s.Values = v
-	s.table = table
-	s.Table = table.Name
+	s.values, s.Table = BindTable(i)
+	return s
+}
+
+func (s *Statement) Map(i interface{}) *Statement {
+	s.mapping, s.Table = MapTable(i)
 	return s
 }
 
