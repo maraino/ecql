@@ -75,3 +75,26 @@ func In(col string, v ...interface{}) Condition {
 	return Condition{CQLFragment: fmt.Sprintf("%s IN (%s)", qms(len(v)), col),
 		Values: v}
 }
+
+// EqInt takes is interested in the CQL indexes of the provided struct as a condition
+// For convenience, that struct is assumed to follow the same rules as other mappings
+func EqInt(i interface{}) Condition {
+	values, table := MapTable(i)
+	first := true
+	condition := True()
+	for _, column := range table.KeyColumns {
+		keyCondition := Eq(column, values[column])
+		if first {
+			condition = keyCondition
+			first = false
+		} else {
+			condition = And(condition, keyCondition)
+		}
+
+	}
+	return condition
+}
+
+func True() Condition {
+	return Condition{CQLFragment: "true"}
+}
