@@ -32,7 +32,7 @@ func TestRegister(t *testing.T) {
 		table, ok := registry[typ]
 		assert.True(t, ok)
 		assert.Equal(t, "mytable", table.Name)
-		assert.Equal(t, "f1", table.KeyColumn)
+		assert.Equal(t, []string{"f1"}, table.KeyColumns)
 		assert.Len(t, table.Columns, 4)
 		for i := range testStructNames {
 			assert.Equal(t, testStructNames[i], table.Columns[i].Name)

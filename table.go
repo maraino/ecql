@@ -15,19 +15,11 @@ const (
 	updateQuery
 )
 
-const (
-	CQL_SELECT = "SELECT * FROM %s WHERE %s = ?"
-	CQL_INSERT = "INSERT INTO %s (%s) VALUES (%s)"
-	CQL_DELETE = "DELETE FROM %s WHERE %s = ?"
-	CQL_UPDATE = "UPDATE %s WHERE %s = ?"
-	CQL_AND    = "AND %s = ?"
-)
-
 // Table contains the information of a table in cassandra.
 type Table struct {
-	Name      string
-	KeyColumn string
-	Columns   []Column
+	Name       string
+	KeyColumns []string
+	Columns    []Column
 }
 
 // Column contains the information of a column in a table required
@@ -41,13 +33,13 @@ func (t *Table) BuildQuery(qt queryType) (string, error) {
 	var cql string
 	switch qt {
 	case selectQuery:
-		cql = fmt.Sprintf(CQL_SELECT, t.Name, t.KeyColumn)
+		cql = fmt.Sprintf("SELECT * FROM %s WHERE %s", t.Name, appendCols(t.KeyColumns))
 	case insertQuery:
-		cql = fmt.Sprintf(CQL_INSERT, t.Name, t.getCols(), t.getQms())
+		cql = fmt.Sprintf("INSERT INTO %s (%s) VALUES (%s)", t.Name, t.getCols(), t.getQms())
 	case deleteQuery:
-		cql = fmt.Sprintf(CQL_DELETE, t.Name, t.KeyColumn)
+		cql = fmt.Sprintf("DELETE FROM %s WHERE %s", t.Name, appendCols(t.KeyColumns))
 	case updateQuery:
-		cql = CQL_UPDATE
+		// cql = "UPDATE %s WHERE %s = ?"
 		return "", ErrInvalidQueryType
 	default:
 		return "", ErrInvalidQueryType
@@ -66,4 +58,12 @@ func (t *Table) getCols() string {
 
 func (t *Table) getQms() string {
 	return qms(len(t.Columns))
+}
+
+func appendCols(cols []string) string {
+	parts := make([]string, len(cols))
+	for i := range cols {
+		parts[i] = fmt.Sprintf("%s = ?", cols[i])
+	}
+	return strings.Join(parts, " AND ")
 }

@@ -161,7 +161,7 @@ func register(i interface{}) Table {
 		// FIXME: add a default behavior, ie: first field
 		name = field.Tag.Get(TAG_KEY)
 		if name != "" {
-			table.KeyColumn = name
+			table.KeyColumns = strings.Split(name, ",")
 		}
 
 		// Get columns or field name
