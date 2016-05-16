@@ -170,42 +170,85 @@ func TestDelete(t *testing.T) {
 		Time:     time.Now().Round(time.Millisecond).UTC(),
 	}
 
+	newTL := timeline{
+		ID:    "me",
+		Time:  newTW.Time,
+		Tweet: newTW.ID,
+	}
+
 	// With Set/Del
 	err := testSession.Set(newTW)
 	assert.NoError(t, err)
 
+	err = testSession.Set(newTL)
+	assert.NoError(t, err)
+
 	var tw tweet
+	var tl timeline
 	err = testSession.Get(&tw, newTW.ID)
 	assert.NoError(t, err)
 	assert.Equal(t, newTW, tw)
+
+	err = testSession.Get(&tl, newTL.ID, newTL.Time)
+	assert.NoError(t, err)
+	assert.Equal(t, newTL, tl)
 
 	err = testSession.Del(tw)
 	assert.NoError(t, err)
 	assert.Equal(t, newTW, tw)
 
+	err = testSession.Del(tl)
+	assert.NoError(t, err)
+	assert.Equal(t, newTL, tl)
+
 	var tww tweet
+	var tll timeline
 	err = testSession.Get(&tww, newTW.ID)
 	assert.Error(t, gocql.ErrNotFound)
 	assert.Zero(t, tww)
 
+	err = testSession.Get(&tll, newTL.ID, newTL.Time)
+	assert.Error(t, gocql.ErrNotFound)
+	assert.Zero(t, tll)
+
 	// With Insert/Delete
 	tw = tweet{}
 	tww = tweet{}
+	tll = timeline{}
 	newTW.ID = gocql.TimeUUID()
+	newTW.Time = time.Now().Round(time.Millisecond).UTC()
+	newTL.Tweet = newTW.ID
+	newTL.Time = newTW.Time
+
 	err = testSession.Insert(newTW).Exec()
+	assert.NoError(t, err)
+
+	err = testSession.Insert(newTL).Exec()
 	assert.NoError(t, err)
 
 	err = testSession.Select(&tw).Where(Eq("id", newTW.ID)).TypeScan()
 	assert.NoError(t, err)
 	assert.Equal(t, newTW, tw)
 
+	err = testSession.Select(&tl).Where(Eq("id", newTL.ID), Eq("time", newTL.Time)).TypeScan()
+	assert.NoError(t, err)
+	assert.Equal(t, newTL, tl)
+
 	err = testSession.Delete(tw).Where(Eq("id", newTW.ID)).Exec()
 	assert.NoError(t, err)
 	assert.Equal(t, newTW, tw)
 
+	err = testSession.Delete(tl).Where(Eq("id", newTL.ID), Eq("time", newTL.Time)).Exec()
+	assert.NoError(t, err)
+	assert.Equal(t, newTL, tl)
+
 	err = testSession.Select(&tww).Where(Eq("id", newTW.ID)).TypeScan()
 	assert.Error(t, gocql.ErrNotFound)
 	assert.Zero(t, tww)
+
+	err = testSession.Select(&tll).Where(Eq("id", newTL.ID), Eq("time", newTL.Time)).TypeScan()
+	assert.Error(t, gocql.ErrNotFound)
+	assert.Zero(t, tll)
 }
 
 func TestCount(t *testing.T) {

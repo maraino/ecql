@@ -89,23 +89,25 @@ func (s *Statement) query() (*gocql.Query, error) {
 
 	if len(s.Conditions) > 0 {
 		cql = append(cql, "WHERE")
+		var cqlConds []string
 		for _, cond := range s.Conditions {
 			args = append(args, cond.Value)
 			switch cond.Predicate {
 			case EqPredicate:
-				cql = append(cql, fmt.Sprintf("%s = ?", cond.Column))
+				cqlConds = append(cqlConds, fmt.Sprintf("%s = ?", cond.Column))
 			case GtPredicate:
-				cql = append(cql, fmt.Sprintf("%s > ?", cond.Column))
+				cqlConds = append(cqlConds, fmt.Sprintf("%s > ?", cond.Column))
 			case GePredicate:
-				cql = append(cql, fmt.Sprintf("%s >= ?", cond.Column))
+				cqlConds = append(cqlConds, fmt.Sprintf("%s >= ?", cond.Column))
 			case LtPredicate:
-				cql = append(cql, fmt.Sprintf("%s < ?", cond.Column))
+				cqlConds = append(cqlConds, fmt.Sprintf("%s < ?", cond.Column))
 			case LePredicate:
-				cql = append(cql, fmt.Sprintf("%s <= ?", cond.Column))
+				cqlConds = append(cqlConds, fmt.Sprintf("%s <= ?", cond.Column))
 			case InPredicate:
-				cql = append(cql, fmt.Sprintf("%s IN (%s)", qms(len(cond.Values)), cond.Column))
+				cqlConds = append(cqlConds, fmt.Sprintf("%s IN (%s)", qms(len(cond.Values)), cond.Column))
 			}
 		}
+		cql = append(cql, strings.Join(cqlConds, " AND "))
 	}
 
 	if len(s.values) > 0 {
