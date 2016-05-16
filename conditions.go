@@ -31,14 +31,26 @@ type Condition struct {
 	Values      []interface{}
 }
 
-func And(lhs Condition, rhs Condition) Condition {
-	return Condition{CQLFragment: fmt.Sprintf("(%s AND %s)", lhs.CQLFragment, rhs.CQLFragment),
-		Values: append(lhs.Values, rhs.Values)}
+func And(lhs Condition, list ...Condition) Condition {
+	cqlfragment := "(" + lhs.CQLFragment
+	values := lhs.Values
+	for _, rhs := range list {
+		cqlfragment += " AND " + rhs.CQLFragment
+		values = append(values, rhs.Values)
+	}
+	cqlfragment += ")"
+	return Condition{CQLFragment: cqlfragment, Values: values}
 }
 
-func Or(lhs Condition, rhs Condition) Condition {
-	return Condition{CQLFragment: fmt.Sprintf("(%s OR %s)", lhs.CQLFragment, rhs.CQLFragment),
-		Values: append(lhs.Values, rhs.Values)}
+func Or(lhs Condition, list ...Condition) Condition {
+	cqlfragment := "(" + lhs.CQLFragment
+	values := lhs.Values
+	for _, rhs := range list {
+		cqlfragment += " OR " + rhs.CQLFragment
+		values = append(values, rhs.Values)
+	}
+	cqlfragment += ")"
+	return Condition{CQLFragment: cqlfragment, Values: values}
 }
 
 func NEq(col string, v interface{}) Condition {

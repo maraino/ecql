@@ -138,15 +138,8 @@ func (s *Statement) FromType(i interface{}) *Statement {
 
 // Where Conditions are implicitly And with each other
 func (s *Statement) Where(cond ...Condition) *Statement {
-	for _, c := range cond {
-		if s.Condition == nil {
-			s.Condition = &c
-		} else {
-			and := And(*s.Condition, c)
-			s.Condition = &and
-		}
-	}
-
+	and := And(cond[0], cond[1:]...)
+	s.Condition = &and
 	return s
 }
 
