@@ -17,7 +17,7 @@ Easy API:
  - [ ] UPDATE statements.
  - [x] Compound primary keys.
 
-Full statements API:
+Statement API:
  - [x] Map struct types with Cassandra tables.
  - [x] SELECT statements.
  - [x] INSERT statements.
