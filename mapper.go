@@ -173,6 +173,12 @@ func register(i interface{}) Table {
 			table.Columns = append(table.Columns, Column{name, i})
 		}
 	}
+
+	// Default behaviour with no key is assume the first column is key
+	if len(table.KeyColumns) == 0 {
+		table.KeyColumns = append(table.KeyColumns, table.Columns[0].Name)
+	}
+
 	registry[t] = table
 	return table
 }
