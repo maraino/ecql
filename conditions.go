@@ -1,6 +1,24 @@
 package ecql
 
-import "fmt"
+type OrderType string
+
+const (
+	AscOrder  OrderType = "ASC"
+	DescOrder           = "DESC"
+)
+
+type OrderBy struct {
+	Column string
+	OrderType
+}
+
+func Asc(col string) OrderBy {
+	return OrderBy{col, AscOrder}
+}
+
+func Desc(col string) OrderBy {
+	return OrderBy{col, DescOrder}
+}
 
 type PredicateType int
 
