@@ -20,6 +20,7 @@ Easy API:
 Statement API:
  - [x] Map struct types with Cassandra tables.
  - [x] SELECT statements.
+ - [x] SELECT COUNT(1) statements.
  - [x] INSERT statements.
  - [x] DELETE statements.
  - [ ] UPDATE statements.
