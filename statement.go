@@ -88,8 +88,8 @@ func (s *Statement) query() (*gocql.Query, error) {
 	var args []interface{}
 
 	if s.Condition != nil {
-		cql = append(cql, "WHERE ", s.Condition.CQLFragment)
-		args = append(args, s.Condition.Values)
+		cql = append(cql, "WHERE", s.Condition.CQLFragment)
+		args = append(args, s.Condition.Values...)
 
 	}
 

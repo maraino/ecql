@@ -36,7 +36,7 @@ func And(lhs Condition, list ...Condition) Condition {
 	values := lhs.Values
 	for _, rhs := range list {
 		cqlfragment += " AND " + rhs.CQLFragment
-		values = append(values, rhs.Values)
+		values = append(values, rhs.Values...)
 	}
 	cqlfragment += ")"
 	return Condition{CQLFragment: cqlfragment, Values: values}
@@ -47,7 +47,7 @@ func Or(lhs Condition, list ...Condition) Condition {
 	values := lhs.Values
 	for _, rhs := range list {
 		cqlfragment += " OR " + rhs.CQLFragment
-		values = append(values, rhs.Values)
+		values = append(values, rhs.Values...)
 	}
 	cqlfragment += ")"
 	return Condition{CQLFragment: cqlfragment, Values: values}
