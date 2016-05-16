@@ -57,6 +57,12 @@ func (s *Statement) Exec() error {
 	}
 }
 
+func (s *Statement) Iter() *Iter {
+	return &Iter{
+		statement: s,
+	}
+}
+
 func (s *Statement) query() (*gocql.Query, error) {
 	var cql []string
 	supportsTTL := false

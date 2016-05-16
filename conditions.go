@@ -1,5 +1,9 @@
 package ecql
 
+import (
+	"fmt"
+)
+
 type OrderType string
 
 const (
