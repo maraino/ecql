@@ -53,6 +53,7 @@ func (s *Statement) Exec() error {
 	if query, err := s.query(); err != nil {
 		return err
 	} else {
+		println("EXEC")
 		return query.Exec()
 	}
 }
@@ -116,7 +117,7 @@ func (s *Statement) query() (*gocql.Query, error) {
 	if supportsTTL && s.TTLValue > 0 {
 		cql = append(cql, fmt.Sprintf("USING TTL %d", s.TTLValue))
 	}
-
+	fmt.Println(cql, args)
 	return s.session.Query(strings.Join(cql, " "), args...), nil
 }
 

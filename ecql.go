@@ -21,12 +21,12 @@ func NewSession(cfg gocql.ClusterConfig) (*Session, error) {
 
 // Get executes a SELECT statements on the table defined in i and sets the
 // fields on i with the information present in the database.
-func (s *Session) Get(i interface{}, key interface{}) error {
+func (s *Session) Get(i interface{}, keys ...interface{}) error {
 	m, table := MapTable(i)
 	if cql, err := table.BuildQuery(selectQuery); err != nil {
 		return err
 	} else {
-		return s.Query(cql, key).MapScan(m)
+		return s.Query(cql, keys...).MapScan(m)
 	}
 }
 
@@ -48,8 +48,11 @@ func (s *Session) Del(i interface{}) error {
 	if cql, err := table.BuildQuery(deleteQuery); err != nil {
 		return err
 	} else {
-		key := m[table.KeyColumn]
-		return s.Query(cql, key).Exec()
+		keys := make([]interface{}, len(table.KeyColumns))
+		for i, name := range table.KeyColumns {
+			keys[i] = m[name]
+		}
+		return s.Query(cql, keys...).Exec()
 	}
 }
 

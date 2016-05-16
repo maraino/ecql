@@ -23,7 +23,7 @@ type tweet struct {
 }
 
 type timeline struct {
-	ID    string     `cql:"id" cqltable:"timeline" cqlkey:"id"`
+	ID    string     `cql:"id" cqltable:"timeline" cqlkey:"id,time"`
 	Time  time.Time  `cql:"time"`
 	Tweet gocql.UUID `cql:"tweet"`
 }
@@ -32,10 +32,10 @@ func initialize(t *testing.T) {
 	sess := testSession.Session
 	for _, stmt := range []string{
 		"TRUNCATE tweet",
-		"INSERT INTO tweet (id, timeline, text, time) VALUES (a5450908-17d7-11e6-b9ec-542696d5770f, 'ecql', 'hello world!', '2016-01-01 00:00:00')",
-		"INSERT INTO tweet (id, timeline, text, time) VALUES (619f33d2-1952-11e6-9f53-542696d5770f, 'ecql', 'ciao world!', '2016-01-01 11:11:11')",
-		"INSERT INTO timeline (id, time, tweet) VALUES ('ecql', '2016-01-01 00:00:00', a5450908-17d7-11e6-b9ec-542696d5770f)",
-		"INSERT INTO timeline (id, time, tweet) VALUES ('ecql', '2016-01-01 11:11:11', 619f33d2-1952-11e6-9f53-542696d5770f)",
+		"INSERT INTO tweet (id, timeline, text, time) VALUES (a5450908-17d7-11e6-b9ec-542696d5770f, 'ecql', 'hello world!', '2016-01-01 00:00:00-0000')",
+		"INSERT INTO tweet (id, timeline, text, time) VALUES (619f33d2-1952-11e6-9f53-542696d5770f, 'ecql', 'ciao world!', '2016-01-01 11:11:11-0000')",
+		"INSERT INTO timeline (id, time, tweet) VALUES ('ecql', '2016-01-01 00:00:00-0000', a5450908-17d7-11e6-b9ec-542696d5770f)",
+		"INSERT INTO timeline (id, time, tweet) VALUES ('ecql', '2016-01-01 11:11:11-0000', 619f33d2-1952-11e6-9f53-542696d5770f)",
 	} {
 		if err := sess.Query(stmt).Exec(); err != nil {
 			fmt.Fprintf(os.Stderr, "Error initializing test_ecql: %s", err.Error())
@@ -49,20 +49,25 @@ func TestSelect(t *testing.T) {
 	initialize(t)
 
 	var tw tweet
+	var tl timeline
 	err := testSession.Get(&tw, "a5450908-17d7-11e6-b9ec-542696d5770f")
 	assert.NoError(t, err)
 	assert.Equal(t, "a5450908-17d7-11e6-b9ec-542696d5770f", tw.ID.String())
 	assert.Equal(t, "ecql", tw.Timeline)
 	assert.Equal(t, "hello world!", tw.Text)
 
-	tw = tweet{}
+	err = testSession.Get(&tl, "ecql", time.Date(2016, 1, 1, 0, 0, 0, 0, time.UTC))
+	assert.NoError(t, err)
+	assert.Equal(t, "ecql", tl.ID)
+	assert.Equal(t, "2016-01-01 00:00:00 +0000 UTC", tw.Time.String())
+	assert.Equal(t, "a5450908-17d7-11e6-b9ec-542696d5770f", tl.Tweet.String())
+
 	err = testSession.Select(&tw).Where(Eq("id", "a5450908-17d7-11e6-b9ec-542696d5770f")).TypeScan()
 	assert.NoError(t, err)
 	assert.Equal(t, "a5450908-17d7-11e6-b9ec-542696d5770f", tw.ID.String())
 	assert.Equal(t, "ecql", tw.Timeline)
 	assert.Equal(t, "hello world!", tw.Text)
 
-	var tl timeline
 	i := 0
 	iter := testSession.Select(&tl).Where(Eq("id", "ecql")).OrderBy(Asc("time")).Iter()
 	for iter.TypeScan(&tl) {
@@ -186,6 +191,7 @@ func TestDelete(t *testing.T) {
 	// With Insert/Delete
 	tw = tweet{}
 	tww = tweet{}
+	newTW.ID = gocql.TimeUUID()
 	err = testSession.Insert(newTW).Exec()
 	assert.NoError(t, err)
 
