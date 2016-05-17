@@ -41,11 +41,6 @@ func And(lhs Condition, list ...Condition) Condition {
 	return Condition{CQLFragment: cqlfragment, Values: values}
 }
 
-func NEq(col string, v interface{}) Condition {
-	return Condition{CQLFragment: fmt.Sprintf("%s != ?", col),
-		Values: []interface{}{v}}
-}
-
 func Eq(col string, v interface{}) Condition {
 	return Condition{CQLFragment: fmt.Sprintf("%s = ?", col),
 		Values: []interface{}{v}}
