@@ -1,5 +1,9 @@
 package ecql
 
+import (
+	"fmt"
+)
+
 type OrderType string
 
 const (
@@ -22,42 +26,70 @@ func Desc(col string) OrderBy {
 
 type PredicateType int
 
-const (
-	EqPredicate PredicateType = iota
-	GtPredicate
-	GePredicate
-	LtPredicate
-	LePredicate
-	InPredicate
-)
-
 type Condition struct {
-	Column    string
-	Predicate PredicateType
-	Value     interface{}
-	Values    []interface{}
+	CQLFragment string
+	Values      []interface{}
+}
+
+func And(lhs Condition, list ...Condition) Condition {
+	cqlfragment := lhs.CQLFragment
+	values := lhs.Values
+	for _, rhs := range list {
+		cqlfragment += " AND " + rhs.CQLFragment
+		values = append(values, rhs.Values...)
+	}
+	return Condition{CQLFragment: cqlfragment, Values: values}
 }
 
 func Eq(col string, v interface{}) Condition {
-	return Condition{col, EqPredicate, v, nil}
+	return Condition{CQLFragment: fmt.Sprintf("%s = ?", col),
+		Values: []interface{}{v}}
 }
 
 func Gt(col string, v interface{}) Condition {
-	return Condition{col, GtPredicate, v, nil}
+	return Condition{CQLFragment: fmt.Sprintf("%s > ?", col),
+		Values: []interface{}{v}}
 }
 
 func Ge(col string, v interface{}) Condition {
-	return Condition{col, GePredicate, v, nil}
+	return Condition{CQLFragment: fmt.Sprintf("%s >= ?", col),
+		Values: []interface{}{v}}
 }
 
 func Lt(col string, v interface{}) Condition {
-	return Condition{col, LtPredicate, v, nil}
+	return Condition{CQLFragment: fmt.Sprintf("%s < ?", col),
+		Values: []interface{}{v}}
 }
 
 func Le(col string, v interface{}) Condition {
-	return Condition{col, LePredicate, v, nil}
+	return Condition{CQLFragment: fmt.Sprintf("%s <= ?", col),
+		Values: []interface{}{v}}
 }
 
 func In(col string, v ...interface{}) Condition {
-	return Condition{col, EqPredicate, nil, v}
+	return Condition{CQLFragment: fmt.Sprintf("%s IN (%s)", qms(len(v)), col),
+		Values: v}
+}
+
+// EqInt takes is interested in the CQL indexes of the provided struct as a condition
+// For convenience, that struct is assumed to follow the same rules as other mappings
+func EqInt(i interface{}) Condition {
+	values, table := MapTable(i)
+	first := true
+	condition := True()
+	for _, column := range table.KeyColumns {
+		keyCondition := Eq(column, values[column])
+		if first {
+			condition = keyCondition
+			first = false
+		} else {
+			condition = And(condition, keyCondition)
+		}
+
+	}
+	return condition
+}
+
+func True() Condition {
+	return Condition{CQLFragment: "true"}
 }

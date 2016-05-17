@@ -158,7 +158,6 @@ func register(i interface{}) Table {
 		}
 
 		// Get the key columns
-		// FIXME: add a default behavior, ie: first field
 		name = field.Tag.Get(TAG_KEY)
 		if name != "" {
 			table.KeyColumns = strings.Split(name, ",")
@@ -173,6 +172,12 @@ func register(i interface{}) Table {
 			table.Columns = append(table.Columns, Column{name, i})
 		}
 	}
+
+	// If no key is explicitly given, assume the first field is implicitly the key
+	if len(table.KeyColumns) == 0 && len(table.Columns) > 0 {
+		table.KeyColumns = []string{table.Columns[0].Name}
+	}
+
 	registry[t] = table
 	return table
 }

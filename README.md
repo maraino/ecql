@@ -26,7 +26,9 @@ Statement API:
  - [ ] UPDATE statements.
  - [x] Iterators to go through multiple results.
  - [x] WHERE filtering (=, >, >=, <, or <=).
+ - [x] WHERE filtering (AND).
  - [x] WHERE filtering (IN).
+ - [x] WHERE filtering (Interface mapping of keys).
  - [ ] WHERE filtering (CONTAINS, CONTAINS KEY)
  - [x] LIMIT on SELECT statements.
  - [x] ORDER BY on SELECT statements.

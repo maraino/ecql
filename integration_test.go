@@ -234,7 +234,7 @@ func TestDelete(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, newTL, tl)
 
-	err = testSession.Delete(tw).Where(Eq("id", newTW.ID)).Exec()
+	err = testSession.Delete(tw).Where(EqInt(newTW)).Exec()
 	assert.NoError(t, err)
 	assert.Equal(t, newTW, tw)
 
