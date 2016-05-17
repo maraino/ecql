@@ -174,7 +174,7 @@ func register(i interface{}) Table {
 	}
 
 	// If no key is explicitly given, assume the first field is implicitly the key
-	if len(table.KeyColumns) == 0 {
+	if len(table.KeyColumns) == 0 && len(table.Columns) > 0 {
 		table.KeyColumns = []string{table.Columns[0].Name}
 	}
 
