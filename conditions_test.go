@@ -90,6 +90,13 @@ func TestLe(t *testing.T) {
 	}
 }
 
+func TestIn(t *testing.T) {
+	mockValues := []interface{}{"red", "green", "violet"}
+	expected := Condition{CQLFragment: "?,?,? IN (colour)", Values: mockValues}
+	result := In("colour", mockValues...)
+	assert.Equal(t, expected, result)
+}
+
 func TestEqInt(t *testing.T) {
 	mockInt := MockModel{MockKey2: "second part", MockKey1: "first part", Mockval: "ignore this"}
 	expected := Condition{CQLFragment: "key1 = ? AND key2 = ?", Values: []interface{}{"first part", "second part"}}
