@@ -4,14 +4,19 @@ import (
 	"github.com/gocql/gocql"
 )
 
-type Iter struct {
-	statement *Statement
+type Iter interface {
+	TypeScan(i interface{}) bool
+	Close() error
+}
+
+type IterImpl struct {
+	statement *StatementImpl
 	query     *gocql.Query
 	iter      *gocql.Iter
 	err       error
 }
 
-func (it *Iter) TypeScan(i interface{}) bool {
+func (it *IterImpl) TypeScan(i interface{}) bool {
 	m := Map(i)
 	if it.iter == nil {
 		if query, err := it.statement.query(); err != nil {
@@ -24,7 +29,7 @@ func (it *Iter) TypeScan(i interface{}) bool {
 	return it.iter.MapScan(m)
 }
 
-func (it *Iter) Close() error {
+func (it *IterImpl) Close() error {
 	if it.err != nil {
 		return it.err
 	}

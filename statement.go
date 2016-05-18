@@ -17,8 +17,24 @@ const (
 	CountCmd
 )
 
-type Statement struct {
-	session    *Session
+type Statement interface {
+	TypeScan() error
+	Scan(i ...interface{}) error
+	Exec() error
+	Iter() Iter
+	Do(cmd Command) Statement
+	From(table string) Statement
+	FromType(i interface{}) Statement
+	Where(cond ...Condition) Statement
+	OrderBy(order ...OrderBy) Statement
+	Bind(i interface{}) Statement
+	Map(i interface{}) Statement
+	Limit(n int) Statement
+	TTL(seconds int) Statement
+}
+
+type StatementImpl struct {
+	session    *SessionImpl
 	Command    Command
 	Table      Table
 	Condition  *Condition
@@ -29,11 +45,11 @@ type Statement struct {
 	values     []interface{}
 }
 
-func NewStatement(sess *Session) *Statement {
-	return &Statement{session: sess}
+func NewStatement(sess *SessionImpl) Statement {
+	return &StatementImpl{session: sess}
 }
 
-func (s *Statement) TypeScan() error {
+func (s *StatementImpl) TypeScan() error {
 	if query, err := s.query(); err != nil {
 		return err
 	} else {
@@ -41,7 +57,7 @@ func (s *Statement) TypeScan() error {
 	}
 }
 
-func (s *Statement) Scan(i ...interface{}) error {
+func (s *StatementImpl) Scan(i ...interface{}) error {
 	if query, err := s.query(); err != nil {
 		return err
 	} else {
@@ -49,7 +65,7 @@ func (s *Statement) Scan(i ...interface{}) error {
 	}
 }
 
-func (s *Statement) Exec() error {
+func (s *StatementImpl) Exec() error {
 	if query, err := s.query(); err != nil {
 		return err
 	} else {
@@ -57,13 +73,13 @@ func (s *Statement) Exec() error {
 	}
 }
 
-func (s *Statement) Iter() *Iter {
-	return &Iter{
+func (s *StatementImpl) Iter() Iter {
+	return &IterImpl{
 		statement: s,
 	}
 }
 
-func (s *Statement) query() (*gocql.Query, error) {
+func (s *StatementImpl) query() (*gocql.Query, error) {
 	var cql []string
 	supportsTTL := false
 
@@ -120,49 +136,49 @@ func (s *Statement) query() (*gocql.Query, error) {
 	return s.session.Query(strings.Join(cql, " "), args...), nil
 }
 
-func (s *Statement) Do(cmd Command) *Statement {
+func (s *StatementImpl) Do(cmd Command) Statement {
 	s.Command = cmd
 	return s
 }
 
-func (s *Statement) From(table string) *Statement {
+func (s *StatementImpl) From(table string) Statement {
 	s.Table = Table{Name: table}
 	return s
 }
 
-func (s *Statement) FromType(i interface{}) *Statement {
+func (s *StatementImpl) FromType(i interface{}) Statement {
 	table := GetTable(i)
 	return s.From(table.Name)
 }
 
 // Where Conditions are implicitly And with each other
-func (s *Statement) Where(cond ...Condition) *Statement {
+func (s *StatementImpl) Where(cond ...Condition) Statement {
 	and := And(cond[0], cond[1:]...)
 	s.Condition = &and
 	return s
 }
 
-func (s *Statement) OrderBy(order ...OrderBy) *Statement {
+func (s *StatementImpl) OrderBy(order ...OrderBy) Statement {
 	s.Orders = order
 	return s
 }
 
-func (s *Statement) Bind(i interface{}) *Statement {
+func (s *StatementImpl) Bind(i interface{}) Statement {
 	s.values, s.Table = BindTable(i)
 	return s
 }
 
-func (s *Statement) Map(i interface{}) *Statement {
+func (s *StatementImpl) Map(i interface{}) Statement {
 	s.mapping, s.Table = MapTable(i)
 	return s
 }
 
-func (s *Statement) Limit(n int) *Statement {
+func (s *StatementImpl) Limit(n int) Statement {
 	s.LimitValue = n
 	return s
 }
 
-func (s *Statement) TTL(seconds int) *Statement {
+func (s *StatementImpl) TTL(seconds int) Statement {
 	s.TTLValue = seconds
 	return s
 }
