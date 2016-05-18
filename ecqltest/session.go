@@ -5,45 +5,45 @@ import (
 	"github.com/maraino/go-mock"
 )
 
-type MockSession struct {
+type Session struct {
 	mock.Mock
 }
 
-func NewMockSession() ecql.Session {
-	return &MockSession{}
+func NewSession() ecql.Session {
+	return &Session{}
 }
 
-func (m *MockSession) Get(i interface{}, keys ...interface{}) error {
+func (m *Session) Get(i interface{}, keys ...interface{}) error {
 	result := m.Called(i, keys)
 	return result.Error(0)
 }
 
-func (m *MockSession) Set(i interface{}) error {
+func (m *Session) Set(i interface{}) error {
 	result := m.Called(i)
 	return result.Error(0)
 }
 
-func (m *MockSession) Del(i interface{}) error {
+func (m *Session) Del(i interface{}) error {
 	result := m.Called(i)
 	return result.Error(0)
 }
 
-func (m *MockSession) Select(i interface{}) ecql.Statement {
+func (m *Session) Select(i interface{}) ecql.Statement {
 	result := m.Called(i)
 	return result.Get(0).(ecql.Statement)
 }
 
-func (m *MockSession) Insert(i interface{}) ecql.Statement {
+func (m *Session) Insert(i interface{}) ecql.Statement {
 	result := m.Called(i)
 	return result.Get(0).(ecql.Statement)
 }
 
-func (m *MockSession) Delete(i interface{}) ecql.Statement {
+func (m *Session) Delete(i interface{}) ecql.Statement {
 	result := m.Called(i)
 	return result.Get(0).(ecql.Statement)
 }
 
-func (m *MockSession) Count(i interface{}) ecql.Statement {
+func (m *Session) Count(i interface{}) ecql.Statement {
 	result := m.Called(i)
 	return result.Get(0).(ecql.Statement)
 }

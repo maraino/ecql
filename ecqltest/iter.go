@@ -5,20 +5,20 @@ import (
 	"github.com/maraino/go-mock"
 )
 
-type MockIter struct {
+type Iter struct {
 	mock.Mock
 }
 
-func NewMockIter() ecql.Iter {
-	return &MockIter{}
+func NewIter() ecql.Iter {
+	return &Iter{}
 }
 
-func (m *MockIter) TypeScan(i interface{}) bool {
+func (m *Iter) TypeScan(i interface{}) bool {
 	result := m.Called(i)
 	return result.Bool(0)
 }
 
-func (m *MockIter) Close() error {
+func (m *Iter) Close() error {
 	result := m.Called()
 	return result.Error(0)
 }
