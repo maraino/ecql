@@ -1,8 +1,8 @@
 package ecqltest
 
 import (
-	"github.com/betable/mock"
 	"github.com/maraino/ecql"
+	"github.com/maraino/go-mock"
 )
 
 type MockIter struct {
