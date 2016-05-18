@@ -2,26 +2,38 @@ package ecql
 
 import "github.com/gocql/gocql"
 
-// Session is the interfaced used by users to interact with the database.
-type Session struct {
+// Session is the interface used by users to interact with the database.
+type Session interface {
+	Get(i interface{}, keys ...interface{}) error
+	Set(i interface{}) error
+	Del(i interface{}) error
+	Select(i interface{}) Statement
+	Insert(i interface{}) Statement
+	Delete(i interface{}) Statement
+	Count(i interface{}) Statement
+}
+
+type SessionImpl struct {
 	*gocql.Session
 }
 
 // NewSession initializes a new ecql.Session with gocql.ConsterConfig.
-func NewSession(cfg gocql.ClusterConfig) (*Session, error) {
+func NewSession(cfg gocql.ClusterConfig) (Session, error) {
 	s, err := gocql.NewSession(cfg)
 	if err != nil {
 		return nil, err
 	}
 
-	return &Session{
+	session := SessionImpl{
 		Session: s,
-	}, nil
+	}
+
+	return &session, nil
 }
 
 // Get executes a SELECT statements on the table defined in i and sets the
 // fields on i with the information present in the database.
-func (s *Session) Get(i interface{}, keys ...interface{}) error {
+func (s *SessionImpl) Get(i interface{}, keys ...interface{}) error {
 	m, table := MapTable(i)
 	if cql, err := table.BuildQuery(selectQuery); err != nil {
 		return err
@@ -32,7 +44,7 @@ func (s *Session) Get(i interface{}, keys ...interface{}) error {
 
 // Set executes an INSERT statement on the the table defined in i and
 // saves the information of i in the dtabase.
-func (s *Session) Set(i interface{}) error {
+func (s *SessionImpl) Set(i interface{}) error {
 	v, table := BindTable(i)
 	if cql, err := table.BuildQuery(insertQuery); err != nil {
 		return err
@@ -43,7 +55,7 @@ func (s *Session) Set(i interface{}) error {
 
 // Del extecutes a delete statement on the table defined in i to
 // remove the object i from the database.
-func (s *Session) Del(i interface{}) error {
+func (s *SessionImpl) Del(i interface{}) error {
 	m, table := MapTable(i)
 	if cql, err := table.BuildQuery(deleteQuery); err != nil {
 		return err
@@ -57,21 +69,21 @@ func (s *Session) Del(i interface{}) error {
 }
 
 // Select initializes a SELECT statement.
-func (s *Session) Select(i interface{}) *Statement {
+func (s *SessionImpl) Select(i interface{}) Statement {
 	return NewStatement(s).Do(SelectCmd).Map(i)
 }
 
 // Select initializes an Insert statement.
-func (s *Session) Insert(i interface{}) *Statement {
+func (s *SessionImpl) Insert(i interface{}) Statement {
 	return NewStatement(s).Do(InsertCmd).Bind(i)
 }
 
 // Select initializes an Insert statement.
-func (s *Session) Delete(i interface{}) *Statement {
+func (s *SessionImpl) Delete(i interface{}) Statement {
 	return NewStatement(s).Do(DeleteCmd).FromType(i)
 }
 
 // Count initializes a SELECT COUNT(1) statement from the table defined by i.
-func (s *Session) Count(i interface{}) *Statement {
+func (s *SessionImpl) Count(i interface{}) Statement {
 	return NewStatement(s).Do(CountCmd).FromType(i)
 }
