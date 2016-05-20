@@ -38,7 +38,7 @@ type StatementImpl struct {
 	session     *SessionImpl
 	Command     Command
 	Table       Table
-	Condition   *Condition
+	Conditions  *Condition
 	Orders      []OrderBy
 	Assignments map[string]interface{}
 	LimitValue  int
@@ -118,10 +118,9 @@ func (s *StatementImpl) query() (*gocql.Query, error) {
 		}
 	}
 
-	if s.Condition != nil {
-		cql = append(cql, "WHERE", s.Condition.CQLFragment)
-		args = append(args, s.Condition.Values...)
-
+	if s.Conditions != nil {
+		cql = append(cql, "WHERE", s.Conditions.CQLFragment)
+		args = append(args, s.Conditions.Values...)
 	}
 
 	if len(s.values) > 0 {
@@ -175,10 +174,10 @@ func (s *StatementImpl) Set(column string, value interface{}) Statement {
 	return s
 }
 
-// Where Conditions are implicitly And with each other
+// Where Conditionss are implicitly And with each other
 func (s *StatementImpl) Where(cond ...Condition) Statement {
 	and := And(cond[0], cond[1:]...)
-	s.Condition = &and
+	s.Conditions = &and
 	return s
 }
 
