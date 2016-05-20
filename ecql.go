@@ -10,6 +10,7 @@ type Session interface {
 	Select(i interface{}) Statement
 	Insert(i interface{}) Statement
 	Delete(i interface{}) Statement
+	Update(i interface{}) Statement
 	Count(i interface{}) Statement
 }
 
@@ -73,14 +74,19 @@ func (s *SessionImpl) Select(i interface{}) Statement {
 	return NewStatement(s).Do(SelectCmd).Map(i)
 }
 
-// Select initializes an Insert statement.
+// Select initializes an INSERT statement.
 func (s *SessionImpl) Insert(i interface{}) Statement {
 	return NewStatement(s).Do(InsertCmd).Bind(i)
 }
 
-// Select initializes an Insert statement.
+// Select initializes an DELETE statement.
 func (s *SessionImpl) Delete(i interface{}) Statement {
 	return NewStatement(s).Do(DeleteCmd).FromType(i)
+}
+
+// Update initializes an UPDATE statement.
+func (s *SessionImpl) Update(i interface{}) Statement {
+	return NewStatement(s).Do(UpdateCmd).FromType(i)
 }
 
 // Count initializes a SELECT COUNT(1) statement from the table defined by i.

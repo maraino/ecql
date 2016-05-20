@@ -13,7 +13,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-var testSession *Session
+var testSession Session
 
 type tweet struct {
 	ID       gocql.UUID `cql:"id" cqltable:"tweet" cqlkey:"id"`
@@ -29,7 +29,7 @@ type timeline struct {
 }
 
 func initialize(t *testing.T) {
-	sess := testSession.Session
+	sess := testSession.(*SessionImpl).Session
 	for _, stmt := range []string{
 		"TRUNCATE tweet",
 		"INSERT INTO tweet (id, timeline, text, time) VALUES (a5450908-17d7-11e6-b9ec-542696d5770f, 'ecql', 'hello world!', '2016-01-01 00:00:00-0000')",
@@ -249,6 +249,53 @@ func TestDelete(t *testing.T) {
 	err = testSession.Select(&tll).Where(Eq("id", newTL.ID), Eq("time", newTL.Time)).TypeScan()
 	assert.Error(t, gocql.ErrNotFound)
 	assert.Zero(t, tll)
+}
+
+func TestUpdate(t *testing.T) {
+	initialize(t)
+
+	var tw tweet
+	err := testSession.Get(&tw, "a5450908-17d7-11e6-b9ec-542696d5770f")
+	assert.NoError(t, err)
+
+	err = testSession.Update(tw).Set("text", "updated tweet").Where(Eq("id", tw.ID)).Exec()
+	assert.NoError(t, err)
+
+	err = testSession.Get(&tw, "a5450908-17d7-11e6-b9ec-542696d5770f")
+	assert.NoError(t, err)
+	assert.Equal(t, "a5450908-17d7-11e6-b9ec-542696d5770f", tw.ID.String())
+	assert.Equal(t, "ecql", tw.Timeline)
+	assert.Equal(t, "updated tweet", tw.Text)
+	assert.Equal(t, "2016-01-01 00:00:00 +0000 UTC", tw.Time.String())
+
+	now := time.Now()
+	err = testSession.Update(tw).Set("text", "foobar tweet").Set("timeline", "foobar").Set("time", now).Where(Eq("id", tw.ID)).Exec()
+	assert.NoError(t, err)
+
+	err = testSession.Get(&tw, "a5450908-17d7-11e6-b9ec-542696d5770f")
+	assert.NoError(t, err)
+	assert.Equal(t, "a5450908-17d7-11e6-b9ec-542696d5770f", tw.ID.String())
+	assert.Equal(t, "foobar", tw.Timeline)
+	assert.Equal(t, "foobar tweet", tw.Text)
+	assert.Equal(t, now.Unix(), tw.Time.Unix())
+
+	err = testSession.Update(tw).TTL(2).Set("text", "tweet with ttl").Where(Eq("id", tw.ID)).Exec()
+	assert.NoError(t, err)
+
+	err = testSession.Get(&tw, "a5450908-17d7-11e6-b9ec-542696d5770f")
+	assert.NoError(t, err)
+	assert.Equal(t, "a5450908-17d7-11e6-b9ec-542696d5770f", tw.ID.String())
+	assert.Equal(t, "foobar", tw.Timeline)
+	assert.Equal(t, "tweet with ttl", tw.Text)
+	assert.Equal(t, now.Unix(), tw.Time.Unix())
+
+	time.Sleep(2 * time.Second)
+	err = testSession.Get(&tw, "a5450908-17d7-11e6-b9ec-542696d5770f")
+	assert.NoError(t, err)
+	assert.Equal(t, "a5450908-17d7-11e6-b9ec-542696d5770f", tw.ID.String())
+	assert.Equal(t, "foobar", tw.Timeline)
+	assert.Equal(t, "", tw.Text)
+	assert.Equal(t, now.Unix(), tw.Time.Unix())
 }
 
 func TestCount(t *testing.T) {

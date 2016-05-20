@@ -25,6 +25,7 @@ type Statement interface {
 	Do(cmd Command) Statement
 	From(table string) Statement
 	FromType(i interface{}) Statement
+	Set(column string, value interface{}) Statement
 	Where(cond ...Condition) Statement
 	OrderBy(order ...OrderBy) Statement
 	Bind(i interface{}) Statement
@@ -34,15 +35,16 @@ type Statement interface {
 }
 
 type StatementImpl struct {
-	session    *SessionImpl
-	Command    Command
-	Table      Table
-	Condition  *Condition
-	Orders     []OrderBy
-	LimitValue int
-	TTLValue   int
-	mapping    map[string]interface{}
-	values     []interface{}
+	session     *SessionImpl
+	Command     Command
+	Table       Table
+	Condition   *Condition
+	Orders      []OrderBy
+	Assignments map[string]interface{}
+	LimitValue  int
+	TTLValue    int
+	mapping     map[string]interface{}
+	values      []interface{}
 }
 
 func NewStatement(sess *SessionImpl) Statement {
@@ -81,19 +83,19 @@ func (s *StatementImpl) Iter() Iter {
 
 func (s *StatementImpl) query() (*gocql.Query, error) {
 	var cql []string
-	supportsTTL := false
 
 	switch s.Command {
 	case SelectCmd:
 		cql = append(cql, fmt.Sprintf("SELECT * FROM %s", s.Table.Name))
 	case InsertCmd:
-		supportsTTL = true
 		cql = append(cql, fmt.Sprintf("INSERT INTO %s (%s) VALUES (%s)", s.Table.Name, s.Table.getCols(), s.Table.getQms()))
 	case DeleteCmd:
 		cql = append(cql, fmt.Sprintf("DELETE FROM %s", s.Table.Name))
-	// case UpdateCmd:
-	//  supportsTTL = true
-	// 	cql = append(cql, fmt.Sprintf("UPDATE %s", s.Table))
+	case UpdateCmd:
+		cql = append(cql, fmt.Sprintf("UPDATE %s", s.Table.Name))
+		if s.TTLValue > 0 {
+			cql = append(cql, fmt.Sprintf("USING TTL %d", s.TTLValue))
+		}
 	case CountCmd:
 		cql = append(cql, fmt.Sprintf("SELECT COUNT(1) FROM %s", s.Table.Name))
 	default:
@@ -101,6 +103,20 @@ func (s *StatementImpl) query() (*gocql.Query, error) {
 	}
 
 	var args []interface{}
+
+	// SET col = ?
+	if s.Command == UpdateCmd {
+		i := 0
+		assignments := make([]string, len(s.Assignments))
+		for col, v := range s.Assignments {
+			assignments[i] = fmt.Sprintf("%s = ?", col)
+			args = append(args, v)
+			i++
+		}
+		if i > 0 {
+			cql = append(cql, "SET", strings.Join(assignments, ", "))
+		}
+	}
 
 	if s.Condition != nil {
 		cql = append(cql, "WHERE", s.Condition.CQLFragment)
@@ -129,7 +145,7 @@ func (s *StatementImpl) query() (*gocql.Query, error) {
 		}
 	}
 
-	if supportsTTL && s.TTLValue > 0 {
+	if s.Command == InsertCmd && s.TTLValue > 0 {
 		cql = append(cql, fmt.Sprintf("USING TTL %d", s.TTLValue))
 	}
 
@@ -149,6 +165,14 @@ func (s *StatementImpl) From(table string) Statement {
 func (s *StatementImpl) FromType(i interface{}) Statement {
 	table := GetTable(i)
 	return s.From(table.Name)
+}
+
+func (s *StatementImpl) Set(column string, value interface{}) Statement {
+	if s.Assignments == nil {
+		s.Assignments = make(map[string]interface{})
+	}
+	s.Assignments[column] = value
+	return s
 }
 
 // Where Conditions are implicitly And with each other
