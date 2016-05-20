@@ -86,7 +86,7 @@ func (s *SessionImpl) Delete(i interface{}) Statement {
 
 // Update initializes an UPDATE statement.
 func (s *SessionImpl) Update(i interface{}) Statement {
-	return NewStatement(s).Do(UpdateCmd).FromType(i)
+	return NewStatement(s).Do(UpdateCmd).FromType(i).Where(EqInt(i))
 }
 
 // Count initializes a SELECT COUNT(1) statement from the table defined by i.

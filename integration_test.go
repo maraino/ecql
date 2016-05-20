@@ -255,10 +255,33 @@ func TestUpdate(t *testing.T) {
 	initialize(t)
 
 	var tw tweet
-	err := testSession.Get(&tw, "a5450908-17d7-11e6-b9ec-542696d5770f")
+	err := testSession.Get(&tw, "619f33d2-1952-11e6-9f53-542696d5770f")
 	assert.NoError(t, err)
 
-	err = testSession.Update(tw).Set("text", "updated tweet").Where(Eq("id", tw.ID)).Exec()
+	// With automatic binding
+	err = testSession.Update(tw).Set("text", "updated tweet").Exec()
+	assert.NoError(t, err)
+
+	err = testSession.Get(&tw, "619f33d2-1952-11e6-9f53-542696d5770f")
+	assert.NoError(t, err)
+	assert.Equal(t, "619f33d2-1952-11e6-9f53-542696d5770f", tw.ID.String())
+	assert.Equal(t, "ecql", tw.Timeline)
+	assert.Equal(t, "updated tweet", tw.Text)
+	assert.Equal(t, "2016-01-01 11:11:11 +0000 UTC", tw.Time.String())
+
+	now := time.Now()
+	err = testSession.Update(tw).Set("text", "foobar tweet").Set("timeline", "foobar").Set("time", now).Exec()
+	assert.NoError(t, err)
+
+	err = testSession.Get(&tw, "619f33d2-1952-11e6-9f53-542696d5770f")
+	assert.NoError(t, err)
+	assert.Equal(t, "619f33d2-1952-11e6-9f53-542696d5770f", tw.ID.String())
+	assert.Equal(t, "foobar", tw.Timeline)
+	assert.Equal(t, "foobar tweet", tw.Text)
+	assert.Equal(t, now.Unix(), tw.Time.Unix())
+
+	// With where
+	err = testSession.Update(tw).Set("text", "updated tweet").Where(Eq("id", "a5450908-17d7-11e6-b9ec-542696d5770f")).Exec()
 	assert.NoError(t, err)
 
 	err = testSession.Get(&tw, "a5450908-17d7-11e6-b9ec-542696d5770f")
@@ -268,7 +291,7 @@ func TestUpdate(t *testing.T) {
 	assert.Equal(t, "updated tweet", tw.Text)
 	assert.Equal(t, "2016-01-01 00:00:00 +0000 UTC", tw.Time.String())
 
-	now := time.Now()
+	now = time.Now()
 	err = testSession.Update(tw).Set("text", "foobar tweet").Set("timeline", "foobar").Set("time", now).Where(Eq("id", tw.ID)).Exec()
 	assert.NoError(t, err)
 

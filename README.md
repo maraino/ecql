@@ -23,7 +23,8 @@ Statement API:
  - [x] SELECT COUNT(1) statements.
  - [x] INSERT statements.
  - [x] DELETE statements.
- - [ ] UPDATE statements.
+ - [x] UPDATE statements.
+ - [ ] BATCH statements.
  - [x] Iterators to go through multiple results.
  - [x] WHERE filtering (=, >, >=, <, or <=).
  - [x] WHERE filtering (AND).
@@ -39,7 +40,7 @@ Statement API:
  - [x] USING TTL on INSERT statements.
  - [ ] USING TIMESTAMP on INSERT statements.
  - [ ] USING TIMESTAMP on DELETE statements.
- - [ ] USING TTL on UPDATE statements.
+ - [x] USING TTL on UPDATE statements.
  - [ ] USING TIMESTAMP on UPDATE statements.
  - [ ] Counters.
  - [ ] Functions.
