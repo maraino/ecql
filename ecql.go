@@ -18,6 +18,13 @@ type SessionImpl struct {
 	*gocql.Session
 }
 
+// New creates a ecql.Session from an already existent gocql.Session.
+func New(s *gocql.Session) Session {
+	return &SessionImpl{
+		Session: s,
+	}
+}
+
 // NewSession initializes a new ecql.Session with gocql.ConsterConfig.
 func NewSession(cfg gocql.ClusterConfig) (Session, error) {
 	s, err := gocql.NewSession(cfg)
@@ -25,11 +32,7 @@ func NewSession(cfg gocql.ClusterConfig) (Session, error) {
 		return nil, err
 	}
 
-	session := SessionImpl{
-		Session: s,
-	}
-
-	return &session, nil
+	return New(s), nil
 }
 
 // Get executes a SELECT statements on the table defined in i and sets the
