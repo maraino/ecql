@@ -292,6 +292,20 @@ func TestDelete(t *testing.T) {
 	assert.Zero(t, tll)
 }
 
+func TestDeleteAutoBinding(t *testing.T) {
+	initialize(t)
+
+	var tw tweet
+	err := testSession.Get(&tw, "a5450908-17d7-11e6-b9ec-542696d5770f")
+	assert.NoError(t, err)
+
+	err = testSession.Delete(tw).Exec()
+	assert.NoError(t, err)
+
+	err = testSession.Get(&tw, "a5450908-17d7-11e6-b9ec-542696d5770f")
+	assert.Error(t, gocql.ErrNotFound)
+}
+
 func TestDeleteColumns(t *testing.T) {
 	initialize(t)
 
@@ -299,7 +313,7 @@ func TestDeleteColumns(t *testing.T) {
 	err := testSession.Get(&tw, "a5450908-17d7-11e6-b9ec-542696d5770f")
 	assert.NoError(t, err)
 
-	err = testSession.Delete(tw).Columns("text", "time").Where(EqInt(tw)).Exec()
+	err = testSession.Delete(tw).Columns("text", "time").Exec()
 	assert.NoError(t, err)
 
 	tw = tweet{}

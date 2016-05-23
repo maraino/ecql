@@ -84,7 +84,7 @@ func (s *SessionImpl) Insert(i interface{}) Statement {
 
 // Select initializes an DELETE statement.
 func (s *SessionImpl) Delete(i interface{}) Statement {
-	return NewStatement(s).Do(DeleteCmd).FromType(i)
+	return NewStatement(s).Do(DeleteCmd).FromType(i).Where(EqInt(i))
 }
 
 // Update initializes an UPDATE statement.
