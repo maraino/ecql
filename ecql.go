@@ -49,7 +49,7 @@ func (s *SessionImpl) Get(i interface{}, keys ...interface{}) error {
 // Set executes an INSERT statement on the the table defined in i and
 // saves the information of i in the dtabase.
 func (s *SessionImpl) Set(i interface{}) error {
-	v, table := BindTable(i)
+	v, _, table := BindTable(i)
 	if cql, err := table.BuildQuery(insertQuery); err != nil {
 		return err
 	} else {
@@ -89,7 +89,7 @@ func (s *SessionImpl) Delete(i interface{}) Statement {
 
 // Update initializes an UPDATE statement.
 func (s *SessionImpl) Update(i interface{}) Statement {
-	return NewStatement(s).Do(UpdateCmd).FromType(i).Where(EqInt(i))
+	return NewStatement(s).Do(UpdateCmd).Bind(i).Where(EqInt(i))
 }
 
 // Count initializes a SELECT COUNT(1) statement from the table defined by i.

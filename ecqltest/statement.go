@@ -48,6 +48,11 @@ func (m *Statement) FromType(i interface{}) ecql.Statement {
 	return result.Get(0).(ecql.Statement)
 }
 
+func (m *Statement) Columns(columns ...string) ecql.Statement {
+	var result = m.Called(columns)
+	return result.Get(0).(ecql.Statement)
+}
+
 func (m *Statement) Set(column string, value interface{}) ecql.Statement {
 	var result = m.Called(column, value)
 	return result.Get(0).(ecql.Statement)

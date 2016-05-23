@@ -25,6 +25,7 @@ type Statement interface {
 	Do(cmd Command) Statement
 	From(table string) Statement
 	FromType(i interface{}) Statement
+	Columns(columns ...string) Statement
 	Set(column string, value interface{}) Statement
 	Where(cond ...Condition) Statement
 	OrderBy(order ...OrderBy) Statement
@@ -38,6 +39,7 @@ type StatementImpl struct {
 	session     *SessionImpl
 	Command     Command
 	Table       Table
+	ColumnNames []string
 	Conditions  *Condition
 	Orders      []OrderBy
 	Assignments map[string]interface{}
@@ -84,13 +86,28 @@ func (s *StatementImpl) Iter() Iter {
 func (s *StatementImpl) query() (*gocql.Query, error) {
 	var cql []string
 
+	// Query with specific column names
+	withColumnNames := len(s.ColumnNames) > 0
+
 	switch s.Command {
 	case SelectCmd:
-		cql = append(cql, fmt.Sprintf("SELECT * FROM %s", s.Table.Name))
+		if withColumnNames {
+			cql = append(cql, fmt.Sprintf("SELECT %s FROM %s", strings.Join(s.ColumnNames, ", "), s.Table.Name))
+		} else {
+			cql = append(cql, fmt.Sprintf("SELECT * FROM %s", s.Table.Name))
+		}
 	case InsertCmd:
-		cql = append(cql, fmt.Sprintf("INSERT INTO %s (%s) VALUES (%s)", s.Table.Name, s.Table.getCols(), s.Table.getQms()))
+		if withColumnNames {
+			cql = append(cql, fmt.Sprintf("INSERT INTO %s (%s) VALUES (%s)", s.Table.Name, strings.Join(s.ColumnNames, ", "), qms(len(s.ColumnNames))))
+		} else {
+			cql = append(cql, fmt.Sprintf("INSERT INTO %s (%s) VALUES (%s)", s.Table.Name, s.Table.getCols(), s.Table.getQms()))
+		}
 	case DeleteCmd:
-		cql = append(cql, fmt.Sprintf("DELETE FROM %s", s.Table.Name))
+		if withColumnNames {
+			cql = append(cql, fmt.Sprintf("DELETE %s FROM %s", strings.Join(s.ColumnNames, ", "), s.Table.Name))
+		} else {
+			cql = append(cql, fmt.Sprintf("DELETE FROM %s", s.Table.Name))
+		}
 	case UpdateCmd:
 		cql = append(cql, fmt.Sprintf("UPDATE %s", s.Table.Name))
 		if s.TTLValue > 0 {
@@ -104,10 +121,16 @@ func (s *StatementImpl) query() (*gocql.Query, error) {
 
 	var args []interface{}
 
-	// SET col = ?
+	// On UPDATE: SET col = ?
 	if s.Command == UpdateCmd {
 		i := 0
-		assignments := make([]string, len(s.Assignments))
+		assignments := make([]string, len(s.Assignments)+len(s.ColumnNames))
+
+		for _, col := range s.ColumnNames {
+			assignments[i] = fmt.Sprintf("%s = ?", col)
+			args = append(args, s.mapping[col])
+			i++
+		}
 		for col, v := range s.Assignments {
 			assignments[i] = fmt.Sprintf("%s = ?", col)
 			args = append(args, v)
@@ -118,17 +141,13 @@ func (s *StatementImpl) query() (*gocql.Query, error) {
 		}
 	}
 
+	// WHERE ...
 	if s.Conditions != nil {
 		cql = append(cql, "WHERE", s.Conditions.CQLFragment)
 		args = append(args, s.Conditions.Values...)
 	}
 
-	if len(s.values) > 0 {
-		for i := range s.values {
-			args = append(args, s.values[i])
-		}
-	}
-
+	// On SELECT: ORDER BY ... LIMIT n
 	if s.Command == SelectCmd {
 		if len(s.Orders) > 0 {
 			cql = append(cql, "ORDER BY")
@@ -144,8 +163,24 @@ func (s *StatementImpl) query() (*gocql.Query, error) {
 		}
 	}
 
-	if s.Command == InsertCmd && s.TTLValue > 0 {
-		cql = append(cql, fmt.Sprintf("USING TTL %d", s.TTLValue))
+	// On INSERT: USING TTL n
+	if s.Command == InsertCmd {
+		if s.TTLValue > 0 {
+			cql = append(cql, fmt.Sprintf("USING TTL %d", s.TTLValue))
+		}
+
+		// Add values
+		if len(s.values) > 0 {
+			if withColumnNames {
+				for i := range s.ColumnNames {
+					args = append(args, s.mapping[s.ColumnNames[i]])
+				}
+			} else {
+				for i := range s.values {
+					args = append(args, s.values[i])
+				}
+			}
+		}
 	}
 
 	return s.session.Query(strings.Join(cql, " "), args...), nil
@@ -166,6 +201,14 @@ func (s *StatementImpl) FromType(i interface{}) Statement {
 	return s.From(table.Name)
 }
 
+// Columns define a list of columns to get on SELECT statements, to set on
+// UPDATE or INSERT statemets or to remove on DELETE statements.
+func (s *StatementImpl) Columns(columns ...string) Statement {
+	s.ColumnNames = columns
+	return s
+}
+
+// Set allows to add a new Set to an UPDATE statement.
 func (s *StatementImpl) Set(column string, value interface{}) Statement {
 	if s.Assignments == nil {
 		s.Assignments = make(map[string]interface{})
@@ -187,7 +230,7 @@ func (s *StatementImpl) OrderBy(order ...OrderBy) Statement {
 }
 
 func (s *StatementImpl) Bind(i interface{}) Statement {
-	s.values, s.Table = BindTable(i)
+	s.values, s.mapping, s.Table = BindTable(i)
 	return s
 }
 

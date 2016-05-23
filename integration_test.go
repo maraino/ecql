@@ -119,6 +119,17 @@ func TestSelect(t *testing.T) {
 	assert.Equal(t, "619f33d2-1952-11e6-9f53-542696d5770f", tl.Tweet.String())
 }
 
+func TestSelectWithColumns(t *testing.T) {
+	initialize(t)
+	var tw tweet
+	err := testSession.Select(&tw).Columns("text").Where(Eq("id", "a5450908-17d7-11e6-b9ec-542696d5770f")).TypeScan()
+	assert.NoError(t, err)
+	assert.Equal(t, "00000000-0000-0000-0000-000000000000", tw.ID.String())
+	assert.Equal(t, "", tw.Timeline)
+	assert.Equal(t, "hello world!", tw.Text)
+	assert.Equal(t, time.Time{}, tw.Time)
+}
+
 func TestInsert(t *testing.T) {
 	initialize(t)
 
@@ -158,6 +169,36 @@ func TestInsert(t *testing.T) {
 	tw = tweet{}
 	err = testSession.Select(&tw).Where(Eq("id", newTW.ID)).TypeScan()
 	assert.Equal(t, gocql.ErrNotFound, err)
+}
+
+func TestInsertColumns(t *testing.T) {
+	initialize(t)
+
+	newTW := tweet{
+		ID:       gocql.TimeUUID(),
+		Timeline: "me",
+		Text:     "Here's a new tweet",
+		Time:     time.Now().Round(time.Millisecond).UTC(),
+	}
+
+	err := testSession.Insert(newTW).Columns("id").Exec()
+	assert.NoError(t, err)
+
+	var tw tweet
+	testSession.Get(&tw, newTW.ID)
+	assert.Equal(t, newTW.ID, tw.ID)
+	assert.Equal(t, "", tw.Timeline)
+	assert.Equal(t, "", tw.Text)
+	assert.Equal(t, time.Time{}, tw.Time)
+
+	err = testSession.Insert(newTW).Columns("id", "timeline", "text").Exec()
+	assert.NoError(t, err)
+
+	testSession.Get(&tw, newTW.ID)
+	assert.Equal(t, newTW.ID, tw.ID)
+	assert.Equal(t, newTW.Timeline, tw.Timeline)
+	assert.Equal(t, newTW.Text, tw.Text)
+	assert.Equal(t, time.Time{}, tw.Time)
 }
 
 func TestDelete(t *testing.T) {
@@ -251,6 +292,25 @@ func TestDelete(t *testing.T) {
 	assert.Zero(t, tll)
 }
 
+func TestDeleteColumns(t *testing.T) {
+	initialize(t)
+
+	var tw tweet
+	err := testSession.Get(&tw, "a5450908-17d7-11e6-b9ec-542696d5770f")
+	assert.NoError(t, err)
+
+	err = testSession.Delete(tw).Columns("text", "time").Where(EqInt(tw)).Exec()
+	assert.NoError(t, err)
+
+	tw = tweet{}
+	err = testSession.Get(&tw, "a5450908-17d7-11e6-b9ec-542696d5770f")
+	assert.NoError(t, err)
+	assert.Equal(t, "a5450908-17d7-11e6-b9ec-542696d5770f", tw.ID.String())
+	assert.Equal(t, "ecql", tw.Timeline)
+	assert.Equal(t, "", tw.Text)
+	assert.Equal(t, time.Time{}, tw.Time)
+}
+
 func TestUpdate(t *testing.T) {
 	initialize(t)
 
@@ -258,7 +318,59 @@ func TestUpdate(t *testing.T) {
 	err := testSession.Get(&tw, "619f33d2-1952-11e6-9f53-542696d5770f")
 	assert.NoError(t, err)
 
-	// With automatic binding
+	// With column names and automatic binding
+	tw.Text = "updated tweet"
+	err = testSession.Update(tw).Columns("text").Exec()
+	assert.NoError(t, err)
+
+	err = testSession.Get(&tw, "619f33d2-1952-11e6-9f53-542696d5770f")
+	assert.NoError(t, err)
+	assert.Equal(t, "619f33d2-1952-11e6-9f53-542696d5770f", tw.ID.String())
+	assert.Equal(t, "ecql", tw.Timeline)
+	assert.Equal(t, "updated tweet", tw.Text)
+	assert.Equal(t, "2016-01-01 11:11:11 +0000 UTC", tw.Time.String())
+
+	now := time.Now()
+	tw.Text = "foobar tweet"
+	tw.Timeline = "foobar"
+	tw.Time = now
+	err = testSession.Update(tw).Columns("text", "timeline", "time").Exec()
+	assert.NoError(t, err)
+
+	err = testSession.Get(&tw, "619f33d2-1952-11e6-9f53-542696d5770f")
+	assert.NoError(t, err)
+	assert.Equal(t, "619f33d2-1952-11e6-9f53-542696d5770f", tw.ID.String())
+	assert.Equal(t, "foobar", tw.Timeline)
+	assert.Equal(t, "foobar tweet", tw.Text)
+	assert.Equal(t, now.Unix(), tw.Time.Unix())
+
+	tw.Text = "tweet with ttl"
+	err = testSession.Update(tw).Columns("text").TTL(2).Exec()
+	assert.NoError(t, err)
+
+	err = testSession.Get(&tw, "619f33d2-1952-11e6-9f53-542696d5770f")
+	assert.NoError(t, err)
+	assert.Equal(t, "619f33d2-1952-11e6-9f53-542696d5770f", tw.ID.String())
+	assert.Equal(t, "foobar", tw.Timeline)
+	assert.Equal(t, "tweet with ttl", tw.Text)
+	assert.Equal(t, now.Unix(), tw.Time.Unix())
+
+	time.Sleep(2 * time.Second)
+	err = testSession.Get(&tw, "619f33d2-1952-11e6-9f53-542696d5770f")
+	assert.NoError(t, err)
+	assert.Equal(t, "619f33d2-1952-11e6-9f53-542696d5770f", tw.ID.String())
+	assert.Equal(t, "foobar", tw.Timeline)
+	assert.Equal(t, "", tw.Text)
+	assert.Equal(t, now.Unix(), tw.Time.Unix())
+}
+
+func TestUpdateSet(t *testing.T) {
+	initialize(t)
+
+	var tw tweet
+	err := testSession.Get(&tw, "619f33d2-1952-11e6-9f53-542696d5770f")
+	assert.NoError(t, err)
+
 	err = testSession.Update(tw).Set("text", "updated tweet").Exec()
 	assert.NoError(t, err)
 
@@ -268,6 +380,9 @@ func TestUpdate(t *testing.T) {
 	assert.Equal(t, "ecql", tw.Timeline)
 	assert.Equal(t, "updated tweet", tw.Text)
 	assert.Equal(t, "2016-01-01 11:11:11 +0000 UTC", tw.Time.String())
+
+	// Avoid errors with some cassandra versions
+	time.Sleep(2 * time.Second)
 
 	now := time.Now()
 	err = testSession.Update(tw).Set("text", "foobar tweet").Set("timeline", "foobar").Set("time", now).Exec()
@@ -279,8 +394,15 @@ func TestUpdate(t *testing.T) {
 	assert.Equal(t, "foobar", tw.Timeline)
 	assert.Equal(t, "foobar tweet", tw.Text)
 	assert.Equal(t, now.Unix(), tw.Time.Unix())
+}
 
-	// With where
+func TestUpdateSetWhere(t *testing.T) {
+	initialize(t)
+
+	var tw tweet
+	err := testSession.Get(&tw, "619f33d2-1952-11e6-9f53-542696d5770f")
+	assert.NoError(t, err)
+
 	err = testSession.Update(tw).Set("text", "updated tweet").Where(Eq("id", "a5450908-17d7-11e6-b9ec-542696d5770f")).Exec()
 	assert.NoError(t, err)
 
@@ -291,7 +413,10 @@ func TestUpdate(t *testing.T) {
 	assert.Equal(t, "updated tweet", tw.Text)
 	assert.Equal(t, "2016-01-01 00:00:00 +0000 UTC", tw.Time.String())
 
-	now = time.Now()
+	// Avoid errors with some cassandra versions
+	time.Sleep(2 * time.Second)
+
+	now := time.Now()
 	err = testSession.Update(tw).Set("text", "foobar tweet").Set("timeline", "foobar").Set("time", now).Where(Eq("id", tw.ID)).Exec()
 	assert.NoError(t, err)
 
