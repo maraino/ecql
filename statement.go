@@ -172,8 +172,8 @@ func (s *StatementImpl) query() (*gocql.Query, error) {
 		// Add values
 		if len(s.values) > 0 {
 			if withColumnNames {
-				for i := range s.ColumnNames {
-					args = append(args, s.mapping[s.ColumnNames[i]])
+				for _, col := range s.ColumnNames {
+					args = append(args, s.mapping[col])
 				}
 			} else {
 				for i := range s.values {
