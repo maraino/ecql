@@ -14,7 +14,10 @@ func NewSession() ecql.Session {
 }
 
 func (m *Session) Get(i interface{}, keys ...interface{}) error {
-	result := m.Called(i, keys...)
+	slice := make([]interface{}, 1)
+	slice[0] = i
+	slice = append(slice, keys...)
+	result := m.Called(slice...)
 	return result.Error(0)
 }
 
