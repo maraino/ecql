@@ -19,7 +19,7 @@ func (m *Statement) TypeScan() error {
 }
 
 func (m *Statement) Scan(i ...interface{}) error {
-	var result = m.Called(i)
+	var result = m.Called(i...)
 	return result.Error(0)
 }
 
@@ -49,7 +49,11 @@ func (m *Statement) FromType(i interface{}) ecql.Statement {
 }
 
 func (m *Statement) Columns(columns ...string) ecql.Statement {
-	var result = m.Called(columns)
+	slice := make([]interface{}, len(columns))
+	for i, v := range columns {
+		slice[i] = v
+	}
+	var result = m.Called(slice...)
 	return result.Get(0).(ecql.Statement)
 }
 
@@ -59,12 +63,21 @@ func (m *Statement) Set(column string, value interface{}) ecql.Statement {
 }
 
 func (m *Statement) Where(cond ...ecql.Condition) ecql.Statement {
-	var result = m.Called(cond)
+	slice := make([]interface{}, len(cond))
+	for i, v := range cond {
+		slice[i] = v
+	}
+
+	var result = m.Called(slice...)
 	return result.Get(0).(ecql.Statement)
 }
 
 func (m *Statement) OrderBy(order ...ecql.OrderBy) ecql.Statement {
-	var result = m.Called(order)
+	slice := make([]interface{}, len(order))
+	for i, v := range order {
+		slice[i] = v
+	}
+	var result = m.Called(slice...)
 	return result.Get(0).(ecql.Statement)
 }
 
