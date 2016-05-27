@@ -14,7 +14,7 @@ func NewSession() ecql.Session {
 }
 
 func (m *Session) Get(i interface{}, keys ...interface{}) error {
-	result := m.Called(i, keys)
+	result := m.Called(i, keys...)
 	return result.Error(0)
 }
 
