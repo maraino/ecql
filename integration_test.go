@@ -130,6 +130,21 @@ func TestSelectWithColumns(t *testing.T) {
 	assert.Equal(t, time.Time{}, tw.Time)
 }
 
+func TestSelectAllowFiltering(t *testing.T) {
+	initialize(t)
+	tiTime := time.Date(2016, 1, 1, 0, 0, 0, 0, time.UTC)
+
+	var ti timeline
+	err := testSession.Select(&ti).Where(Eq("time", tiTime)).TypeScan()
+	assert.Error(t, err)
+
+	err = testSession.Select(&ti).Where(Eq("time", tiTime)).AllowFiltering().TypeScan()
+	assert.NoError(t, err)
+	assert.Equal(t, "ecql", ti.ID)
+	assert.Equal(t, "2016-01-01 00:00:00 +0000 UTC", ti.Time.String())
+	assert.Equal(t, "a5450908-17d7-11e6-b9ec-542696d5770f", ti.Tweet.String())
+}
+
 func TestInsert(t *testing.T) {
 	initialize(t)
 

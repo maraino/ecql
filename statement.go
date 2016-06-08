@@ -29,6 +29,7 @@ type Statement interface {
 	Set(column string, value interface{}) Statement
 	Where(cond ...Condition) Statement
 	OrderBy(order ...OrderBy) Statement
+	AllowFiltering() Statement
 	Bind(i interface{}) Statement
 	Map(i interface{}) Statement
 	Limit(n int) Statement
@@ -36,17 +37,18 @@ type Statement interface {
 }
 
 type StatementImpl struct {
-	session     *SessionImpl
-	Command     Command
-	Table       Table
-	ColumnNames []string
-	Conditions  *Condition
-	Orders      []OrderBy
-	Assignments map[string]interface{}
-	LimitValue  int
-	TTLValue    int
-	mapping     map[string]interface{}
-	values      []interface{}
+	session             *SessionImpl
+	Command             Command
+	Table               Table
+	ColumnNames         []string
+	Conditions          *Condition
+	Orders              []OrderBy
+	Assignments         map[string]interface{}
+	LimitValue          int
+	TTLValue            int
+	AllowFilteringValue bool
+	mapping             map[string]interface{}
+	values              []interface{}
 }
 
 func NewStatement(sess *SessionImpl) Statement {
@@ -161,6 +163,10 @@ func (s *StatementImpl) query() (*gocql.Query, error) {
 		if s.LimitValue > 0 {
 			cql = append(cql, fmt.Sprintf("LIMIT %d", s.LimitValue))
 		}
+
+		if s.AllowFilteringValue {
+			cql = append(cql, "ALLOW FILTERING")
+		}
 	}
 
 	// On INSERT: USING TTL n
@@ -246,6 +252,11 @@ func (s *StatementImpl) Limit(n int) Statement {
 
 func (s *StatementImpl) TTL(seconds int) Statement {
 	s.TTLValue = seconds
+	return s
+}
+
+func (s *StatementImpl) AllowFiltering() Statement {
+	s.AllowFilteringValue = true
 	return s
 }
 

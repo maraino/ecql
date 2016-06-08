@@ -33,7 +33,7 @@ Statement API:
  - [ ] WHERE filtering (CONTAINS, CONTAINS KEY)
  - [x] LIMIT on SELECT statements.
  - [x] ORDER BY on SELECT statements.
- - [ ] ALLOW FILTERING ON SELECT statements.
+ - [x] ALLOW FILTERING ON SELECT statements.
  - [ ] IF NOT EXISTS on INSERT statements.
  - [ ] IF and IF EXISTS on DELETE statements.
  - [ ] IF and IF EXISTS on UPDATE statements.
@@ -50,10 +50,10 @@ Statement API:
 ### Defining a table.
 
 To be able to bind a table in Cassandra to a Go struct we will need tag the struct fields using the tag `cql`, `cqltable` and `cqlkey`.
-The tag `cql` defines the column name, the tag `cqltable` defines the name of the table, and `cqlkey` is a comma separated list of the 
+The tag `cql` defines the column name, the tag `cqltable` defines the name of the table, and `cqlkey` is a comma separated list of the
 primary keys in the right order.
 
-For example, for the CREATE TABLE statement: 
+For example, for the CREATE TABLE statement:
 ```cql
 CREATE TABLE tweet (
   id uuid,

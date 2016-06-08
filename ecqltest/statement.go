@@ -100,3 +100,8 @@ func (m *Statement) TTL(seconds int) ecql.Statement {
 	var result = m.Called(seconds)
 	return result.Get(0).(ecql.Statement)
 }
+
+func (m *Statement) AllowFiltering() ecql.Statement {
+	var result = m.Called()
+	return result.Get(0).(ecql.Statement)
+}
