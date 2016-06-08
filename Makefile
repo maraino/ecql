@@ -1,7 +1,9 @@
 PACKAGE=github.com/maraino/ecql
+TESTPACKAGE=github.com/maraino/ecql/ecqltest
 
 all:
 	go build $(PACKAGE)
+	go build $(TESTPACKAGE)
 
 test:
 	go test -cover $(PACKAGE)

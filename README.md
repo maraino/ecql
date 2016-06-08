@@ -34,9 +34,9 @@ Statement API:
  - [x] LIMIT on SELECT statements.
  - [x] ORDER BY on SELECT statements.
  - [x] ALLOW FILTERING ON SELECT statements.
- - [ ] IF NOT EXISTS on INSERT statements.
- - [ ] IF and IF EXISTS on DELETE statements.
- - [ ] IF and IF EXISTS on UPDATE statements.
+ - [x] IF NOT EXISTS on INSERT statements.
+ - [x] IF and IF EXISTS on DELETE statements.
+ - [x] IF and IF EXISTS on UPDATE statements.
  - [x] USING TTL on INSERT statements.
  - [ ] USING TIMESTAMP on INSERT statements.
  - [ ] USING TIMESTAMP on DELETE statements.

@@ -30,6 +30,8 @@ type Statement interface {
 	Where(cond ...Condition) Statement
 	OrderBy(order ...OrderBy) Statement
 	AllowFiltering() Statement
+	IfExists() Statement
+	IfNotExists() Statement
 	Bind(i interface{}) Statement
 	Map(i interface{}) Statement
 	Limit(n int) Statement
@@ -47,6 +49,8 @@ type StatementImpl struct {
 	LimitValue          int
 	TTLValue            int
 	AllowFilteringValue bool
+	IfExistsValue       bool
+	IfNotExistsValue    bool
 	mapping             map[string]interface{}
 	values              []interface{}
 }
@@ -71,10 +75,24 @@ func (s *StatementImpl) Scan(i ...interface{}) error {
 	}
 }
 
+// Exec builds the query statement and executes it returning nil or the gocql
+// error. On DELETE and UPDATE statements, the behavior of Exec differs from
+// gocql if IfExists() is used, in this case, ecql will perform a ScanCAS and
+// return gocql.ErrNotFound if the query was not applied.
 func (s *StatementImpl) Exec() error {
 	if query, err := s.query(); err != nil {
 		return err
 	} else {
+		// Perform a ScanCAS and reeturn an error if the update/delete are not successful.
+		if s.IfExistsValue && (s.Command == UpdateCmd || s.Command == DeleteCmd) {
+			if applied, err := query.ScanCAS(); err != nil {
+				return err
+			} else if applied == false {
+				return gocql.ErrNotFound
+			}
+			return nil
+		}
+
 		return query.Exec()
 	}
 }
@@ -169,8 +187,12 @@ func (s *StatementImpl) query() (*gocql.Query, error) {
 		}
 	}
 
-	// On INSERT: USING TTL n
+	// On INSERT: IF NOT EXISTS USING TTL n
 	if s.Command == InsertCmd {
+		if s.IfNotExistsValue {
+			cql = append(cql, "IF NOT EXISTS")
+		}
+
 		if s.TTLValue > 0 {
 			cql = append(cql, fmt.Sprintf("USING TTL %d", s.TTLValue))
 		}
@@ -186,6 +208,13 @@ func (s *StatementImpl) query() (*gocql.Query, error) {
 					args = append(args, s.values[i])
 				}
 			}
+		}
+	}
+
+	// ON UPDATE/DELETE: ... IF EXISTS
+	if s.Command == UpdateCmd || s.Command == DeleteCmd {
+		if s.IfExistsValue {
+			cql = append(cql, "IF EXISTS")
 		}
 	}
 
@@ -257,6 +286,16 @@ func (s *StatementImpl) TTL(seconds int) Statement {
 
 func (s *StatementImpl) AllowFiltering() Statement {
 	s.AllowFilteringValue = true
+	return s
+}
+
+func (s *StatementImpl) IfExists() Statement {
+	s.IfExistsValue = true
+	return s
+}
+
+func (s *StatementImpl) IfNotExists() Statement {
+	s.IfNotExistsValue = true
 	return s
 }
 

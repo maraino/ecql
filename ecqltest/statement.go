@@ -105,3 +105,13 @@ func (m *Statement) AllowFiltering() ecql.Statement {
 	var result = m.Called()
 	return result.Get(0).(ecql.Statement)
 }
+
+func (m *Statement) IfExists() ecql.Statement {
+	var result = m.Called()
+	return result.Get(0).(ecql.Statement)
+}
+
+func (m *Statement) IfNotExists() ecql.Statement {
+	var result = m.Called()
+	return result.Get(0).(ecql.Statement)
+}

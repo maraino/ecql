@@ -216,6 +216,28 @@ func TestInsertColumns(t *testing.T) {
 	assert.Equal(t, time.Time{}, tw.Time)
 }
 
+func TestInsertIfNotExists(t *testing.T) {
+	initialize(t)
+
+	newTW := tweet{
+		ID:       gocql.TimeUUID(),
+		Timeline: "me",
+		Text:     "Here's a new tweet",
+		Time:     time.Now().Round(time.Millisecond).UTC(),
+	}
+
+	err := testSession.Insert(newTW).IfNotExists().Exec()
+	assert.NoError(t, err)
+
+	tw := tweet{}
+	err = testSession.Get(&tw, newTW.ID)
+	assert.NoError(t, err)
+	assert.Equal(t, newTW, tw)
+
+	err = testSession.Insert(newTW).IfNotExists().Exec()
+	assert.NoError(t, err)
+}
+
 func TestDelete(t *testing.T) {
 	initialize(t)
 
@@ -338,6 +360,24 @@ func TestDeleteColumns(t *testing.T) {
 	assert.Equal(t, "ecql", tw.Timeline)
 	assert.Equal(t, "", tw.Text)
 	assert.Equal(t, time.Time{}, tw.Time)
+}
+
+func TestDeleteIfExists(t *testing.T) {
+	initialize(t)
+
+	tw := tweet{
+		ID: gocql.TimeUUID(),
+	}
+
+	err := testSession.Delete(tw).IfExists().Exec()
+	assert.Equal(t, gocql.ErrNotFound, err)
+
+	tw.ID = MustUUID("a5450908-17d7-11e6-b9ec-542696d5770f")
+	err = testSession.Delete(tw).IfExists().Exec()
+	assert.NoError(t, err)
+
+	err = testSession.Get(&tw, "a5450908-17d7-11e6-b9ec-542696d5770f")
+	assert.Error(t, gocql.ErrNotFound)
 }
 
 func TestUpdate(t *testing.T) {
@@ -473,6 +513,26 @@ func TestUpdateSetWhere(t *testing.T) {
 	assert.Equal(t, "foobar", tw.Timeline)
 	assert.Equal(t, "", tw.Text)
 	assert.Equal(t, now.Unix(), tw.Time.Unix())
+}
+
+func TestUpdateIfExists(t *testing.T) {
+	initialize(t)
+
+	tw := tweet{
+		ID: gocql.TimeUUID(),
+	}
+
+	err := testSession.Update(tw).Set("text", "foobar tweet").IfExists().Exec()
+	assert.Equal(t, gocql.ErrNotFound, err)
+
+	tw.ID = MustUUID("a5450908-17d7-11e6-b9ec-542696d5770f")
+	err = testSession.Update(tw).Set("text", "foobar tweet").IfExists().Exec()
+	assert.NoError(t, err)
+
+	err = testSession.Get(&tw, "a5450908-17d7-11e6-b9ec-542696d5770f")
+	assert.NoError(t, err)
+	assert.Equal(t, "a5450908-17d7-11e6-b9ec-542696d5770f", tw.ID.String())
+	assert.Equal(t, "foobar tweet", tw.Text)
 }
 
 func TestCount(t *testing.T) {
