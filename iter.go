@@ -10,9 +10,9 @@ type Iter interface {
 }
 
 type IterImpl struct {
+	iter      *gocql.Iter
 	statement *StatementImpl
 	query     *gocql.Query
-	iter      *gocql.Iter
 	err       error
 }
 

@@ -38,8 +38,8 @@ func initialize(t *testing.T) {
 		"INSERT INTO timeline (id, time, tweet) VALUES ('ecql', '2016-01-01 11:11:11-0000', 619f33d2-1952-11e6-9f53-542696d5770f)",
 	} {
 		if err := sess.Query(stmt).Exec(); err != nil {
-			fmt.Fprintf(os.Stderr, "Error initializing test_ecql: %s", err.Error())
-			fmt.Fprintf(os.Stderr, "Query: %s", stmt)
+			fmt.Fprintf(os.Stderr, "Error initializing test_ecql: %s\n", err.Error())
+			fmt.Fprintf(os.Stderr, "Query: %s\n", stmt)
 			t.FailNow()
 		}
 	}
@@ -152,7 +152,7 @@ func TestInsert(t *testing.T) {
 		ID:       gocql.TimeUUID(),
 		Timeline: "me",
 		Text:     "Here's a new tweet",
-		Time:     time.Now().Round(time.Millisecond).UTC(),
+		Time:     Now().UTC(),
 	}
 
 	err := testSession.Set(newTW)
@@ -193,7 +193,7 @@ func TestInsertColumns(t *testing.T) {
 		ID:       gocql.TimeUUID(),
 		Timeline: "me",
 		Text:     "Here's a new tweet",
-		Time:     time.Now().Round(time.Millisecond).UTC(),
+		Time:     Now().UTC(),
 	}
 
 	err := testSession.Insert(newTW).Columns("id").Exec()
@@ -223,7 +223,7 @@ func TestInsertIfNotExists(t *testing.T) {
 		ID:       gocql.TimeUUID(),
 		Timeline: "me",
 		Text:     "Here's a new tweet",
-		Time:     time.Now().Round(time.Millisecond).UTC(),
+		Time:     Now().UTC(),
 	}
 
 	err := testSession.Insert(newTW).IfNotExists().Exec()
@@ -245,7 +245,7 @@ func TestDelete(t *testing.T) {
 		ID:       gocql.TimeUUID(),
 		Timeline: "me",
 		Text:     "Here's a new tweet",
-		Time:     time.Now().Round(time.Millisecond).UTC(),
+		Time:     Now().UTC(),
 	}
 
 	newTL := timeline{
@@ -294,7 +294,7 @@ func TestDelete(t *testing.T) {
 	tww = tweet{}
 	tll = timeline{}
 	newTW.ID = gocql.TimeUUID()
-	newTW.Time = time.Now().Round(time.Millisecond).UTC()
+	newTW.Time = Now().UTC()
 	newTL.Tweet = newTW.ID
 	newTL.Time = newTW.Time
 
@@ -548,6 +548,71 @@ func TestCount(t *testing.T) {
 	assert.Equal(t, 1, count)
 }
 
+func TestBatch(t *testing.T) {
+	initialize(t)
+
+	tw1 := tweet{
+		ID:       gocql.TimeUUID(),
+		Timeline: "me",
+		Text:     "First tweet",
+		Time:     Now().UTC(),
+	}
+
+	tw2 := tweet{
+		ID:       gocql.TimeUUID(),
+		Timeline: "me",
+		Text:     "Second tweet",
+		Time:     Now().UTC(),
+	}
+
+	// Apply: ok
+	stmt1 := testSession.Insert(tw1)
+	stmt2 := testSession.Insert(tw2)
+	batch := testSession.Batch().Add(stmt1, stmt2)
+
+	err := batch.Apply()
+	assert.NoError(t, err)
+
+	tw := tweet{}
+	err = testSession.Get(&tw, tw1.ID)
+	assert.NoError(t, err)
+	assert.Equal(t, tw1, tw)
+
+	err = testSession.Get(&tw, tw2.ID)
+	assert.NoError(t, err)
+	assert.Equal(t, tw2, tw)
+
+	// ApplyCAS: ok
+	now := Now().UTC()
+	tw1.ID = gocql.TimeUUID()
+	stmt1 = testSession.Insert(tw1).IfNotExists()
+	stmt2 = testSession.Update(tw1).Set("time", now)
+	batch = testSession.Batch().Add(stmt1, stmt2)
+
+	applied, err := batch.ApplyCAS()
+	assert.True(t, applied)
+	assert.NoError(t, err)
+
+	tw1.Time = now
+	// Avoid errors with some cassandra versions
+	time.Sleep(2 * time.Second)
+
+	tw = tweet{}
+	err = testSession.Get(&tw, tw1.ID)
+	assert.NoError(t, err)
+	assert.Equal(t, tw1, tw)
+
+	// ApplyCAS: not applied
+	now = Now().UTC()
+	stmt1 = testSession.Insert(tw1).IfNotExists()
+	stmt2 = testSession.Update(tw1).Set("time", now)
+	batch = testSession.Batch().Add(stmt1, stmt2)
+
+	applied, err = batch.ApplyCAS()
+	assert.False(t, applied)
+	assert.NoError(t, err)
+}
+
 func TestMain(m *testing.M) {
 	flag.Parse()
 
@@ -555,14 +620,14 @@ func TestMain(m *testing.M) {
 	cluster := gocql.NewCluster("localhost")
 	sess, err := cluster.CreateSession()
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error connecting cassandra: %s", err.Error())
+		fmt.Fprintf(os.Stderr, "Error connecting cassandra: %s\n", err.Error())
 		os.Exit(1)
 	}
 
 	// Remove test keyspace
 	cleanup := func() {
 		if err := sess.Query("DROP KEYSPACE test_ecql").Exec(); err != nil {
-			fmt.Fprintf(os.Stderr, "Error dropping test_ecql: %s", err.Error())
+			fmt.Fprintf(os.Stderr, "Error dropping test_ecql: %s\n", err.Error())
 			os.Exit(1)
 		}
 		sess.Close()
@@ -570,7 +635,7 @@ func TestMain(m *testing.M) {
 
 	// Initialize test keyspace
 	if err := sess.Query("CREATE KEYSPACE test_ecql WITH REPLICATION = { 'class' : 'SimpleStrategy', 'replication_factor' : 1 }").Exec(); err != nil {
-		fmt.Fprintf(os.Stderr, "Error creating test_ecql: %s", err.Error())
+		fmt.Fprintf(os.Stderr, "Error creating test_ecql: %s\n", err.Error())
 		cleanup()
 		os.Exit(1)
 	}
@@ -578,7 +643,7 @@ func TestMain(m *testing.M) {
 	cluster.Keyspace = "test_ecql"
 	sess2, err := cluster.CreateSession()
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error connecting cassandra: %s", err.Error())
+		fmt.Fprintf(os.Stderr, "Error connecting cassandra: %s\n", err.Error())
 		cleanup()
 		os.Exit(1)
 	}
@@ -589,8 +654,8 @@ func TestMain(m *testing.M) {
 		"CREATE TABLE timeline (id text, time timestamp, tweet uuid, PRIMARY KEY(id, time))",
 	} {
 		if err := sess2.Query(stmt).Exec(); err != nil {
-			fmt.Fprintf(os.Stderr, "Error initializing test_ecql: %s", err.Error())
-			fmt.Fprintf(os.Stderr, "Query: %s", stmt)
+			fmt.Fprintf(os.Stderr, "Error initializing test_ecql: %s\n", err.Error())
+			fmt.Fprintf(os.Stderr, "Query: %s\n", stmt)
 			cleanup()
 			os.Exit(1)
 		}
@@ -601,7 +666,7 @@ func TestMain(m *testing.M) {
 	cluster.Keyspace = "test_ecql"
 	testSession, err = NewSession(*cluster)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error connecting cassandra: %s", err.Error())
+		fmt.Fprintf(os.Stderr, "Error connecting cassandra: %s\n", err.Error())
 		cleanup()
 		os.Exit(1)
 	}

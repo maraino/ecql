@@ -24,7 +24,7 @@ Statement API:
  - [x] INSERT statements.
  - [x] DELETE statements.
  - [x] UPDATE statements.
- - [ ] BATCH statements.
+ - [x] BATCH statements.
  - [x] Iterators to go through multiple results.
  - [x] WHERE filtering (=, >, >=, <, or <=).
  - [x] WHERE filtering (AND).

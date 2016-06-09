@@ -22,6 +22,7 @@ type Statement interface {
 	Scan(i ...interface{}) error
 	Exec() error
 	Iter() Iter
+	BuildQuery() (string, []interface{})
 	Do(cmd Command) Statement
 	From(table string) Statement
 	FromType(i interface{}) Statement
@@ -104,6 +105,12 @@ func (s *StatementImpl) Iter() Iter {
 }
 
 func (s *StatementImpl) query() (*gocql.Query, error) {
+	stmt, args := s.BuildQuery()
+	return s.session.Query(stmt, args...), nil
+}
+
+// BuildQuery returns the statement query and arguments that will be executed.
+func (s *StatementImpl) BuildQuery() (string, []interface{}) {
 	var cql []string
 
 	// Query with specific column names
@@ -136,7 +143,8 @@ func (s *StatementImpl) query() (*gocql.Query, error) {
 	case CountCmd:
 		cql = append(cql, fmt.Sprintf("SELECT COUNT(1) FROM %s", s.Table.Name))
 	default:
-		return nil, ErrInvalidCommand
+		// This should not happen
+		panic(ErrInvalidCommand)
 	}
 
 	var args []interface{}
@@ -218,7 +226,7 @@ func (s *StatementImpl) query() (*gocql.Query, error) {
 		}
 	}
 
-	return s.session.Query(strings.Join(cql, " "), args...), nil
+	return strings.Join(cql, " "), args
 }
 
 func (s *StatementImpl) Do(cmd Command) Statement {

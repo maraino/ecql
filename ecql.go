@@ -12,6 +12,7 @@ type Session interface {
 	Delete(i interface{}) Statement
 	Update(i interface{}) Statement
 	Count(i interface{}) Statement
+	Batch() Batch
 }
 
 type SessionImpl struct {
@@ -95,4 +96,10 @@ func (s *SessionImpl) Update(i interface{}) Statement {
 // Count initializes a SELECT COUNT(1) statement from the table defined by i.
 func (s *SessionImpl) Count(i interface{}) Statement {
 	return NewStatement(s).Do(CountCmd).FromType(i)
+}
+
+// Batch initializes a new LOGGED BATCH to combine multiple data modification statements
+// (INSERT, UPDATE, DELETE)
+func (s *SessionImpl) Batch() Batch {
+	return NewBatch(s, gocql.LoggedBatch)
 }

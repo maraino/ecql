@@ -53,3 +53,8 @@ func (m *Session) Count(i interface{}) ecql.Statement {
 	result := m.Called(i)
 	return result.Get(0).(ecql.Statement)
 }
+
+func (m *Session) Batch() ecql.Batch {
+	result := m.Called()
+	return result.Get(0).(ecql.Batch)
+}

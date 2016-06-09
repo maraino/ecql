@@ -33,6 +33,11 @@ func (m *Statement) Iter() ecql.Iter {
 	return result.Get(0).(ecql.Iter)
 }
 
+func (m *Statement) BuildQuery() (string, []interface{}) {
+	var result = m.Called()
+	return result.String(0), result.Get(1).([]interface{})
+}
+
 func (m *Statement) Do(cmd ecql.Command) ecql.Statement {
 	var result = m.Called(cmd)
 	return result.Get(0).(ecql.Statement)
