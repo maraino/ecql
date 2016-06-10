@@ -93,3 +93,21 @@ func EqInt(i interface{}) Condition {
 func True() Condition {
 	return Condition{CQLFragment: "true"}
 }
+
+// Contains creates the condition 'col CONTAINS value' used to filter elements
+// in a collection set, list, or map.
+func Contains(col string, v interface{}) Condition {
+	return Condition{
+		CQLFragment: fmt.Sprintf("%s CONTAINS ?", col),
+		Values:      []interface{}{v},
+	}
+}
+
+// Contains creates the condition 'col CONTAINS KEY value' used to filter elements
+// by key in a map.
+func ContainsKey(col string, v interface{}) Condition {
+	return Condition{
+		CQLFragment: fmt.Sprintf("%s CONTAINS KEY ?", col),
+		Values:      []interface{}{v},
+	}
+}

@@ -30,7 +30,7 @@ Statement API:
  - [x] WHERE filtering (AND).
  - [x] WHERE filtering (IN).
  - [x] WHERE filtering (Interface mapping of keys).
- - [ ] WHERE filtering (CONTAINS, CONTAINS KEY)
+ - [x] WHERE filtering (CONTAINS, CONTAINS KEY)
  - [x] LIMIT on SELECT statements.
  - [x] ORDER BY on SELECT statements.
  - [x] ALLOW FILTERING ON SELECT statements.

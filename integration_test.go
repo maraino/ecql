@@ -15,6 +15,12 @@ import (
 
 var testSession Session
 
+type user struct {
+	ID        string            `cql:"id" cqltable:"users", cqlkey:"id"`
+	Following []string          `cql:"following`
+	Details   map[string]string `cql:"details"`
+}
+
 type tweet struct {
 	ID       gocql.UUID `cql:"id" cqltable:"tweet" cqlkey:"id"`
 	Timeline string     `cql:"timeline"`
@@ -32,6 +38,7 @@ func initialize(t *testing.T) {
 	sess := testSession.(*SessionImpl).Session
 	for _, stmt := range []string{
 		"TRUNCATE tweet",
+		"INSERT INTO users (id, following, details) VALUES ('ecql', ['foo','bar'], {'handle':'@ecql','url':'https://github.com/maraino/ecql'})",
 		"INSERT INTO tweet (id, timeline, text, time) VALUES (a5450908-17d7-11e6-b9ec-542696d5770f, 'ecql', 'hello world!', '2016-01-01 00:00:00-0000')",
 		"INSERT INTO tweet (id, timeline, text, time) VALUES (619f33d2-1952-11e6-9f53-542696d5770f, 'ecql', 'ciao world!', '2016-01-01 11:11:11-0000')",
 		"INSERT INTO timeline (id, time, tweet) VALUES ('ecql', '2016-01-01 00:00:00-0000', a5450908-17d7-11e6-b9ec-542696d5770f)",
@@ -48,6 +55,7 @@ func initialize(t *testing.T) {
 func TestSelect(t *testing.T) {
 	initialize(t)
 
+	var u user
 	var tw tweet
 	var tl timeline
 	err := testSession.Get(&tw, "a5450908-17d7-11e6-b9ec-542696d5770f")
@@ -117,6 +125,20 @@ func TestSelect(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, "ecql", tl.ID)
 	assert.Equal(t, "619f33d2-1952-11e6-9f53-542696d5770f", tl.Tweet.String())
+
+	err = testSession.Select(&u).Where(Eq("id", "ecql"), Contains("following", "bar")).TypeScan()
+	assert.NoError(t, err)
+	assert.Equal(t, "ecql", u.ID)
+
+	err = testSession.Select(&u).Where(Eq("id", "ecql"), Contains("following", "zar")).TypeScan()
+	assert.Equal(t, gocql.ErrNotFound, err)
+
+	err = testSession.Select(&u).Where(Eq("id", "ecql"), ContainsKey("details", "handle")).TypeScan()
+	assert.NoError(t, err)
+	assert.Equal(t, "ecql", u.ID)
+
+	err = testSession.Select(&u).Where(Eq("id", "ecql"), ContainsKey("details", "github")).TypeScan()
+	assert.Equal(t, gocql.ErrNotFound, err)
 }
 
 func TestSelectWithColumns(t *testing.T) {
@@ -626,10 +648,7 @@ func TestMain(m *testing.M) {
 
 	// Remove test keyspace
 	cleanup := func() {
-		if err := sess.Query("DROP KEYSPACE test_ecql").Exec(); err != nil {
-			fmt.Fprintf(os.Stderr, "Error dropping test_ecql: %s\n", err.Error())
-			os.Exit(1)
-		}
+		sess.Query("DROP KEYSPACE test_ecql").Exec()
 		sess.Close()
 	}
 
@@ -650,8 +669,11 @@ func TestMain(m *testing.M) {
 
 	// Create test tables
 	for _, stmt := range []string{
+		"CREATE TABLE users (id text PRIMARY KEY, following list<text>, details map<text,text>)",
 		"CREATE TABLE tweet (id uuid PRIMARY KEY, timeline text, text text, time timestamp)",
 		"CREATE TABLE timeline (id text, time timestamp, tweet uuid, PRIMARY KEY(id, time))",
+		"CREATE INDEX ON users (following)",
+		"CREATE INDEX ON users (keys(details))",
 	} {
 		if err := sess2.Query(stmt).Exec(); err != nil {
 			fmt.Fprintf(os.Stderr, "Error initializing test_ecql: %s\n", err.Error())
