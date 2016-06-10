@@ -95,7 +95,7 @@ func True() Condition {
 }
 
 // Contains creates the condition 'col CONTAINS value' used to filter elements
-// in a collection set, list, or map.
+// in a collection set, list, or map. Supported on CQL versions >= 3.2.0.
 func Contains(col string, v interface{}) Condition {
 	return Condition{
 		CQLFragment: fmt.Sprintf("%s CONTAINS ?", col),
@@ -104,7 +104,7 @@ func Contains(col string, v interface{}) Condition {
 }
 
 // Contains creates the condition 'col CONTAINS KEY value' used to filter elements
-// by key in a map.
+// by key in a map. Supported on CQL versions >= 3.2.0.
 func ContainsKey(col string, v interface{}) Condition {
 	return Condition{
 		CQLFragment: fmt.Sprintf("%s CONTAINS KEY ?", col),

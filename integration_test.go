@@ -6,6 +6,8 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"strconv"
+	"strings"
 	"testing"
 	"time"
 
@@ -14,6 +16,7 @@ import (
 )
 
 var testSession Session
+var cqlVersion []int
 
 type user struct {
 	ID        string            `cql:"id" cqltable:"users", cqlkey:"id"`
@@ -126,19 +129,22 @@ func TestSelect(t *testing.T) {
 	assert.Equal(t, "ecql", tl.ID)
 	assert.Equal(t, "619f33d2-1952-11e6-9f53-542696d5770f", tl.Tweet.String())
 
-	err = testSession.Select(&u).Where(Eq("id", "ecql"), Contains("following", "bar")).TypeScan()
-	assert.NoError(t, err)
-	assert.Equal(t, "ecql", u.ID)
+	// Supported on 3.2.0
+	if cqlVersion[0] > 3 || (cqlVersion[0] >= 3 && cqlVersion[1] >= 2) {
+		err = testSession.Select(&u).Where(Eq("id", "ecql"), Contains("following", "bar")).TypeScan()
+		assert.NoError(t, err)
+		assert.Equal(t, "ecql", u.ID)
 
-	err = testSession.Select(&u).Where(Eq("id", "ecql"), Contains("following", "zar")).TypeScan()
-	assert.Equal(t, gocql.ErrNotFound, err)
+		err = testSession.Select(&u).Where(Eq("id", "ecql"), Contains("following", "zar")).TypeScan()
+		assert.Equal(t, gocql.ErrNotFound, err)
 
-	err = testSession.Select(&u).Where(Eq("id", "ecql"), ContainsKey("details", "handle")).TypeScan()
-	assert.NoError(t, err)
-	assert.Equal(t, "ecql", u.ID)
+		err = testSession.Select(&u).Where(Eq("id", "ecql"), ContainsKey("details", "handle")).TypeScan()
+		assert.NoError(t, err)
+		assert.Equal(t, "ecql", u.ID)
 
-	err = testSession.Select(&u).Where(Eq("id", "ecql"), ContainsKey("details", "github")).TypeScan()
-	assert.Equal(t, gocql.ErrNotFound, err)
+		err = testSession.Select(&u).Where(Eq("id", "ecql"), ContainsKey("details", "github")).TypeScan()
+		assert.Equal(t, gocql.ErrNotFound, err)
+	}
 }
 
 func TestSelectWithColumns(t *testing.T) {
@@ -646,6 +652,19 @@ func TestMain(m *testing.M) {
 		os.Exit(1)
 	}
 
+	// Get CQL version
+	var version string
+	if err := sess.Query("SELECT cql_version FROM system.local").Scan(&version); err != nil {
+		fmt.Fprintf(os.Stderr, "Error reading cql_version: %s\n", err.Error())
+		os.Exit(1)
+	}
+
+	versionParts := strings.Split(version, ".")
+	cqlVersion = make([]int, len(versionParts))
+	for i := range cqlVersion {
+		cqlVersion[i], _ = strconv.Atoi(versionParts[i])
+	}
+
 	// Remove test keyspace
 	cleanup := func() {
 		sess.Query("DROP KEYSPACE test_ecql").Exec()
@@ -668,13 +687,17 @@ func TestMain(m *testing.M) {
 	}
 
 	// Create test tables
-	for _, stmt := range []string{
+	stmts := []string{
 		"CREATE TABLE users (id text PRIMARY KEY, following list<text>, details map<text,text>)",
 		"CREATE TABLE tweet (id uuid PRIMARY KEY, timeline text, text text, time timestamp)",
 		"CREATE TABLE timeline (id text, time timestamp, tweet uuid, PRIMARY KEY(id, time))",
-		"CREATE INDEX ON users (following)",
-		"CREATE INDEX ON users (keys(details))",
-	} {
+	}
+	// Supported on 3.2.0
+	if cqlVersion[0] > 3 || (cqlVersion[0] >= 3 && cqlVersion[1] >= 2) {
+		stmts = append(stmts, "CREATE INDEX ON users (following)")
+		stmts = append(stmts, "CREATE INDEX ON users (keys(details))")
+	}
+	for _, stmt := range stmts {
 		if err := sess2.Query(stmt).Exec(); err != nil {
 			fmt.Fprintf(os.Stderr, "Error initializing test_ecql: %s\n", err.Error())
 			fmt.Fprintf(os.Stderr, "Query: %s\n", stmt)
