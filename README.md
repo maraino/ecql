@@ -39,7 +39,7 @@ Statement API:
  - [x] IF and IF EXISTS on UPDATE statements.
  - [x] USING TTL on INSERT statements.
  - [x] USING TIMESTAMP on INSERT statements.
- - [ ] USING TIMESTAMP on DELETE statements.
+ - [x] USING TIMESTAMP on DELETE statements.
  - [ ] USING TIMESTAMP on BATCH statements.
  - [x] USING TTL on UPDATE statements.
  - [x] USING TIMESTAMP on UPDATE statements.
