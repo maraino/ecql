@@ -108,7 +108,6 @@ func (s *StatementImpl) Iter() Iter {
 
 func (s *StatementImpl) query() (*gocql.Query, error) {
 	stmt, args := s.BuildQuery()
-	fmt.Println(stmt, args)
 	return s.session.Query(stmt, args...), nil
 }
 
@@ -137,6 +136,9 @@ func (s *StatementImpl) BuildQuery() (string, []interface{}) {
 			cql = append(cql, fmt.Sprintf("DELETE %s FROM %s", strings.Join(s.ColumnNames, ", "), s.Table.Name))
 		} else {
 			cql = append(cql, fmt.Sprintf("DELETE FROM %s", s.Table.Name))
+		}
+		if s.TimestampValue > 0 {
+			cql = append(cql, fmt.Sprintf("USING TIMESTAMP %d", s.TimestampValue))
 		}
 	case UpdateCmd:
 		cql = append(cql, fmt.Sprintf("UPDATE %s", s.Table.Name))

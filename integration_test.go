@@ -439,6 +439,68 @@ func TestDeleteIfExists(t *testing.T) {
 	assert.Error(t, gocql.ErrNotFound)
 }
 
+func TestDeleteUsingTimestamp(t *testing.T) {
+	initialize(t)
+
+	var tw1 tweet
+	var tw2 tweet
+
+	err := testSession.Get(&tw1, "a5450908-17d7-11e6-b9ec-542696d5770f")
+	assert.NoError(t, err)
+
+	// do not delete anything with a timestamp in the past,
+	// now has already passed
+	microseconds := Now().Unix() * 1e6
+	err = testSession.Delete(tw1).Timestamp(microseconds).Exec()
+	assert.NoError(t, err)
+
+	err = testSession.Get(&tw2, "a5450908-17d7-11e6-b9ec-542696d5770f")
+	assert.NoError(t, err)
+	assert.Equal(t, tw1, tw2)
+
+	// Set specific a future timestamp for two columns
+	tw1.Text = "updated text"
+	tw1.Time = Now().UTC()
+	microseconds = Now().Add(1*time.Second).Unix() * 1e6
+	err = testSession.Update(tw1).Columns("text", "time").Timestamp(microseconds).Exec()
+	assert.NoError(t, err)
+
+	// Do not delete with a lower timestamp
+	err = testSession.Delete(tw1).Columns("text", "time").Timestamp(microseconds - 1).Exec()
+	assert.NoError(t, err)
+
+	// Wait until the future timestamp and check
+	time.Sleep(2 * time.Second)
+	tw2 = tweet{}
+	err = testSession.Get(&tw2, "a5450908-17d7-11e6-b9ec-542696d5770f")
+	assert.NoError(t, err)
+	assert.Equal(t, tw1, tw2)
+
+	// Delete columns with a bigger timestamp
+	microseconds = Now().Add(1*time.Second).Unix() * 1e6
+	err = testSession.Delete(tw1).Columns("text", "time").Timestamp(microseconds).Exec()
+	assert.NoError(t, err)
+
+	// Wait until the future timestamp and check
+	time.Sleep(2 * time.Second)
+	tw2 = tweet{}
+	err = testSession.Get(&tw2, "a5450908-17d7-11e6-b9ec-542696d5770f")
+	assert.NoError(t, err)
+	assert.Equal(t, "a5450908-17d7-11e6-b9ec-542696d5770f", tw2.ID.String())
+	assert.Equal(t, "ecql", tw2.Timeline)
+	assert.Equal(t, "", tw2.Text)
+	assert.Equal(t, time.Time{}, tw2.Time)
+
+	// delete everything with newer timestamp
+	microseconds = Now().Add(1*time.Second).Unix() * 1e6
+	err = testSession.Delete(tw1).Timestamp(microseconds).Exec()
+	assert.NoError(t, err)
+
+	tw2 = tweet{}
+	err = testSession.Get(&tw2, "a5450908-17d7-11e6-b9ec-542696d5770f")
+	assert.Equal(t, gocql.ErrNotFound, err)
+}
+
 func TestUpdate(t *testing.T) {
 	initialize(t)
 
