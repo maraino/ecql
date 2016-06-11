@@ -42,7 +42,7 @@ Statement API:
  - [ ] USING TIMESTAMP on DELETE statements.
  - [ ] USING TIMESTAMP on BATCH statements.
  - [x] USING TTL on UPDATE statements.
- - [ ] USING TIMESTAMP on UPDATE statements.
+ - [x] USING TIMESTAMP on UPDATE statements.
  - [ ] Counters.
  - [ ] Functions.
 

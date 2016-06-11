@@ -108,6 +108,7 @@ func (s *StatementImpl) Iter() Iter {
 
 func (s *StatementImpl) query() (*gocql.Query, error) {
 	stmt, args := s.BuildQuery()
+	fmt.Println(stmt, args)
 	return s.session.Query(stmt, args...), nil
 }
 
@@ -139,8 +140,12 @@ func (s *StatementImpl) BuildQuery() (string, []interface{}) {
 		}
 	case UpdateCmd:
 		cql = append(cql, fmt.Sprintf("UPDATE %s", s.Table.Name))
-		if s.TTLValue > 0 {
+		if s.TTLValue > 0 && s.TimestampValue > 0 {
+			cql = append(cql, fmt.Sprintf("USING TTL %d AND TIMESTAMP %d", s.TTLValue, s.TimestampValue))
+		} else if s.TTLValue > 0 {
 			cql = append(cql, fmt.Sprintf("USING TTL %d", s.TTLValue))
+		} else if s.TimestampValue > 0 {
+			cql = append(cql, fmt.Sprintf("USING TIMESTAMP %d", s.TimestampValue))
 		}
 	case CountCmd:
 		cql = append(cql, fmt.Sprintf("SELECT COUNT(1) FROM %s", s.Table.Name))

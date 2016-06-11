@@ -472,6 +472,7 @@ func TestUpdate(t *testing.T) {
 	assert.Equal(t, "foobar tweet", tw.Text)
 	assert.Equal(t, now.Unix(), tw.Time.Unix())
 
+	// With TTL
 	tw.Text = "tweet with ttl"
 	err = testSession.Update(tw).Columns("text").TTL(2).Exec()
 	assert.NoError(t, err)
@@ -482,6 +483,43 @@ func TestUpdate(t *testing.T) {
 	assert.Equal(t, "foobar", tw.Timeline)
 	assert.Equal(t, "tweet with ttl", tw.Text)
 	assert.Equal(t, now.Unix(), tw.Time.Unix())
+
+	time.Sleep(2 * time.Second)
+	err = testSession.Get(&tw, "619f33d2-1952-11e6-9f53-542696d5770f")
+	assert.NoError(t, err)
+	assert.Equal(t, "619f33d2-1952-11e6-9f53-542696d5770f", tw.ID.String())
+	assert.Equal(t, "foobar", tw.Timeline)
+	assert.Equal(t, "", tw.Text)
+	assert.Equal(t, now.Unix(), tw.Time.Unix())
+
+	// With Timestamp
+	microseconds := Now().Unix() * 1e6
+	tw.Text = "tweet with timestamp"
+	err = testSession.Update(tw).Columns("text").Timestamp(microseconds).Exec()
+	assert.NoError(t, err)
+
+	var writetime int64
+	var text string
+	query := testSession.Query("SELECT text, writetime(text) FROM tweet WHERE id = ?", tw.ID)
+	err = query.Scan(&text, &writetime)
+	assert.NoError(t, err)
+	assert.Equal(t, tw.Text, text)
+	assert.Equal(t, microseconds, writetime)
+
+	// Avoid errors with some cassandra versions
+	time.Sleep(2 * time.Second)
+
+	// With TTL + Timestamp
+	microseconds = Now().Unix() * 1e6
+	tw.Text = "tweet with a different timestamp"
+	err = testSession.Update(tw).Columns("text").TTL(2).Timestamp(microseconds).Exec()
+	assert.NoError(t, err)
+
+	query = testSession.Query("SELECT text, writetime(text) FROM tweet WHERE id = ?", tw.ID)
+	err = query.Scan(&text, &writetime)
+	assert.NoError(t, err)
+	assert.Equal(t, tw.Text, text)
+	assert.Equal(t, microseconds, writetime)
 
 	time.Sleep(2 * time.Second)
 	err = testSession.Get(&tw, "619f33d2-1952-11e6-9f53-542696d5770f")
