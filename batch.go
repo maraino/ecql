@@ -9,9 +9,8 @@ type Batch interface {
 }
 
 type BatchImpl struct {
-	session    *SessionImpl
-	batch      *gocql.Batch
-	statements []Statement
+	session *SessionImpl
+	batch   *gocql.Batch
 }
 
 func NewBatch(sess *SessionImpl, typ gocql.BatchType) Batch {
@@ -22,7 +21,6 @@ func NewBatch(sess *SessionImpl, typ gocql.BatchType) Batch {
 }
 
 func (b *BatchImpl) Add(s ...Statement) Batch {
-	b.statements = append(b.statements, s...)
 	for i := range s {
 		stmt, args := s[i].BuildQuery()
 		b.batch.Query(stmt, args...)
