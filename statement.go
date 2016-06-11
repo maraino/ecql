@@ -37,6 +37,7 @@ type Statement interface {
 	Map(i interface{}) Statement
 	Limit(n int) Statement
 	TTL(seconds int) Statement
+	Timestamp(microseconds int64) Statement
 }
 
 type StatementImpl struct {
@@ -49,6 +50,7 @@ type StatementImpl struct {
 	Assignments         map[string]interface{}
 	LimitValue          int
 	TTLValue            int
+	TimestampValue      int64
 	AllowFilteringValue bool
 	IfExistsValue       bool
 	IfNotExistsValue    bool
@@ -201,8 +203,12 @@ func (s *StatementImpl) BuildQuery() (string, []interface{}) {
 			cql = append(cql, "IF NOT EXISTS")
 		}
 
-		if s.TTLValue > 0 {
+		if s.TTLValue > 0 && s.TimestampValue > 0 {
+			cql = append(cql, fmt.Sprintf("USING TTL %d AND TIMESTAMP %d", s.TTLValue, s.TimestampValue))
+		} else if s.TTLValue > 0 {
 			cql = append(cql, fmt.Sprintf("USING TTL %d", s.TTLValue))
+		} else if s.TimestampValue > 0 {
+			cql = append(cql, fmt.Sprintf("USING TIMESTAMP %d", s.TimestampValue))
 		}
 
 		// Add values
@@ -289,6 +295,11 @@ func (s *StatementImpl) Limit(n int) Statement {
 
 func (s *StatementImpl) TTL(seconds int) Statement {
 	s.TTLValue = seconds
+	return s
+}
+
+func (s *StatementImpl) Timestamp(microseconds int64) Statement {
+	s.TimestampValue = microseconds
 	return s
 }
 

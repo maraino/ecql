@@ -13,6 +13,7 @@ type Session interface {
 	Update(i interface{}) Statement
 	Count(i interface{}) Statement
 	Batch() Batch
+	Query(stmt string, args ...interface{}) *gocql.Query
 }
 
 type SessionImpl struct {

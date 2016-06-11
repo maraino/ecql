@@ -199,6 +199,7 @@ func TestInsert(t *testing.T) {
 	testSession.Select(&tw).Where(Eq("id", newTW.ID)).TypeScan()
 	assert.Equal(t, newTW, tw)
 
+	// With TTL
 	newTW.ID = gocql.TimeUUID()
 	err = testSession.Insert(newTW).TTL(2).Exec()
 	assert.NoError(t, err)
@@ -207,6 +208,36 @@ func TestInsert(t *testing.T) {
 	err = testSession.Select(&tw).Where(Eq("id", newTW.ID)).TypeScan()
 	assert.NoError(t, err)
 	assert.Equal(t, newTW, tw)
+
+	time.Sleep(2 * time.Second)
+	tw = tweet{}
+	err = testSession.Select(&tw).Where(Eq("id", newTW.ID)).TypeScan()
+	assert.Equal(t, gocql.ErrNotFound, err)
+
+	// With Timestamp
+	newTW.ID = gocql.TimeUUID()
+	microseconds := Now().Unix() * 1e6
+	err = testSession.Insert(newTW).Timestamp(microseconds).Exec()
+	assert.NoError(t, err)
+
+	var writetime int64
+	query := testSession.Query("SELECT writetime(time) FROM tweet WHERE id = ?", newTW.ID)
+	err = query.Scan(&writetime)
+	assert.NoError(t, err)
+	assert.Equal(t, microseconds, writetime)
+
+	// With TTL + Timestamp
+	var uuid gocql.UUID
+	newTW.ID = gocql.TimeUUID()
+	microseconds = Now().Unix() * 1e6
+	err = testSession.Insert(newTW).TTL(2).Timestamp(microseconds).Exec()
+	assert.NoError(t, err)
+
+	query = testSession.Query("SELECT id, writetime(time) FROM tweet WHERE id = ?", newTW.ID)
+	err = query.Scan(&uuid, &writetime)
+	assert.NoError(t, err)
+	assert.Equal(t, newTW.ID, uuid)
+	assert.Equal(t, microseconds, writetime)
 
 	time.Sleep(2 * time.Second)
 	tw = tweet{}

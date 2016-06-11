@@ -106,6 +106,11 @@ func (m *Statement) TTL(seconds int) ecql.Statement {
 	return result.Get(0).(ecql.Statement)
 }
 
+func (m *Statement) Timestamp(microseconds int64) ecql.Statement {
+	var result = m.Called(microseconds)
+	return result.Get(0).(ecql.Statement)
+}
+
 func (m *Statement) AllowFiltering() ecql.Statement {
 	var result = m.Called()
 	return result.Get(0).(ecql.Statement)

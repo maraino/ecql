@@ -1,6 +1,7 @@
 package ecqltest
 
 import (
+	"github.com/gocql/gocql"
 	"github.com/maraino/ecql"
 	"github.com/maraino/go-mock"
 )
@@ -57,4 +58,9 @@ func (m *Session) Count(i interface{}) ecql.Statement {
 func (m *Session) Batch() ecql.Batch {
 	result := m.Called()
 	return result.Get(0).(ecql.Batch)
+}
+
+func (m *Session) Query(stmt string, args ...interface{}) *gocql.Query {
+	var result = m.Called(stmt, args)
+	return result.Get(0).(*gocql.Query)
 }
