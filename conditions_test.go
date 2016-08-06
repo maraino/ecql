@@ -92,7 +92,7 @@ func TestLe(t *testing.T) {
 
 func TestIn(t *testing.T) {
 	mockValues := []interface{}{"red", "green", "violet"}
-	expected := Condition{CQLFragment: "?,?,? IN (colour)", Values: mockValues}
+	expected := Condition{CQLFragment: "colour IN (?,?,?)", Values: mockValues}
 	result := In("colour", mockValues...)
 	assert.Equal(t, expected, result)
 }
