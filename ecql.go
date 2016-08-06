@@ -1,6 +1,12 @@
 package ecql
 
-import "github.com/gocql/gocql"
+import (
+	"os"
+
+	"github.com/gocql/gocql"
+)
+
+var EcqlDebug = (os.Getenv("ECQL_DEBUG") == "true")
 
 // Session is the interface used by users to interact with the database.
 type Session interface {

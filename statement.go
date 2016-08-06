@@ -2,6 +2,7 @@ package ecql
 
 import (
 	"fmt"
+	"log"
 	"strings"
 
 	"github.com/gocql/gocql"
@@ -237,6 +238,10 @@ func (s *StatementImpl) BuildQuery() (string, []interface{}) {
 		if s.IfExistsValue {
 			cql = append(cql, "IF EXISTS")
 		}
+	}
+
+	if EcqlDebug {
+		log.Println(cql, args)
 	}
 
 	return strings.Join(cql, " "), args
