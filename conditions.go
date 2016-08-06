@@ -67,7 +67,7 @@ func Le(col string, v interface{}) Condition {
 }
 
 func In(col string, v ...interface{}) Condition {
-	return Condition{CQLFragment: fmt.Sprintf("%s IN (%s)", qms(len(v)), col),
+	return Condition{CQLFragment: fmt.Sprintf("%s IN (%s)", col, qms(len(v))),
 		Values: v}
 }
 
