@@ -37,6 +37,11 @@ type timeline struct {
 	Tweet gocql.UUID `cql:"tweet"`
 }
 
+type views struct {
+	ID      gocql.UUID `cql:"id" cqltable:"views" cqlkey:"id"`
+	Counter int64      `cql:"counter"`
+}
+
 func initialize(t *testing.T) {
 	sess := testSession.(*SessionImpl).Session
 	for _, stmt := range []string{
@@ -622,6 +627,47 @@ func TestUpdateSet(t *testing.T) {
 	assert.Equal(t, "foobar", tw.Timeline)
 	assert.Equal(t, "foobar tweet", tw.Text)
 	assert.Equal(t, now.Unix(), tw.Time.Unix())
+
+	// Counters - Inc
+	var vw views
+	vw.ID = MustUUID("a5450908-17d7-11e6-b9ec-542696d5770f")
+	err = testSession.Update(vw).Set("counter", Inc(1)).Exec()
+	assert.NoError(t, err)
+	err = testSession.Update(vw).Set("counter", Inc(1)).Exec()
+	assert.NoError(t, err)
+
+	err = testSession.Get(&vw, "a5450908-17d7-11e6-b9ec-542696d5770f")
+	assert.NoError(t, err)
+	assert.Equal(t, "a5450908-17d7-11e6-b9ec-542696d5770f", vw.ID.String())
+	assert.Equal(t, int64(2), vw.Counter)
+
+	vw.ID = MustUUID("619f33d2-1952-11e6-9f53-542696d5770f")
+	err = testSession.Update(vw).Set("counter", Inc(10)).Exec()
+	assert.NoError(t, err)
+
+	err = testSession.Get(&vw, "619f33d2-1952-11e6-9f53-542696d5770f")
+	assert.NoError(t, err)
+	assert.Equal(t, "619f33d2-1952-11e6-9f53-542696d5770f", vw.ID.String())
+	assert.Equal(t, int64(10), vw.Counter)
+
+	// Counters - Dec
+	vw.ID = MustUUID("a5450908-17d7-11e6-b9ec-542696d5770f")
+	err = testSession.Update(vw).Set("counter", Dec(1)).Exec()
+	assert.NoError(t, err)
+
+	err = testSession.Get(&vw, "a5450908-17d7-11e6-b9ec-542696d5770f")
+	assert.NoError(t, err)
+	assert.Equal(t, "a5450908-17d7-11e6-b9ec-542696d5770f", vw.ID.String())
+	assert.Equal(t, int64(1), vw.Counter)
+
+	vw.ID = MustUUID("619f33d2-1952-11e6-9f53-542696d5770f")
+	err = testSession.Update(vw).Set("counter", Dec(2)).Exec()
+	assert.NoError(t, err)
+
+	err = testSession.Get(&vw, "619f33d2-1952-11e6-9f53-542696d5770f")
+	assert.NoError(t, err)
+	assert.Equal(t, "619f33d2-1952-11e6-9f53-542696d5770f", vw.ID.String())
+	assert.Equal(t, int64(8), vw.Counter)
 }
 
 func TestUpdateSetWhere(t *testing.T) {
@@ -822,6 +868,7 @@ func TestMain(m *testing.M) {
 		"CREATE TABLE users (id text PRIMARY KEY, following list<text>, details map<text,text>)",
 		"CREATE TABLE tweet (id uuid PRIMARY KEY, timeline text, text text, time timestamp)",
 		"CREATE TABLE timeline (id text, time timestamp, tweet uuid, PRIMARY KEY(id, time))",
+		"CREATE TABLE views (id uuid PRIMARY KEY, counter counter)",
 	}
 	// Supported on 3.2.0
 	if cqlVersion[0] > 3 || (cqlVersion[0] >= 3 && cqlVersion[1] >= 2) {

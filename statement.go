@@ -170,8 +170,18 @@ func (s *StatementImpl) BuildQuery() (string, []interface{}) {
 			i++
 		}
 		for col, v := range s.Assignments {
-			assignments[i] = fmt.Sprintf("%s = ?", col)
-			args = append(args, v)
+			switch vv := v.(type) {
+			case increaseType:
+				assignments[i] = fmt.Sprintf("%s = %s + ?", col, col)
+				args = append(args, int64(vv))
+			case decreaseType:
+				assignments[i] = fmt.Sprintf("%s = %s - ?", col, col)
+				args = append(args, int64(vv))
+			default:
+				assignments[i] = fmt.Sprintf("%s = ?", col)
+				args = append(args, v)
+			}
+
 			i++
 		}
 		if i > 0 {

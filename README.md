@@ -43,7 +43,7 @@ Statement API:
  - [ ] USING TIMESTAMP on BATCH statements.
  - [x] USING TTL on UPDATE statements.
  - [x] USING TIMESTAMP on UPDATE statements.
- - [ ] Counters.
+ - [x] Counters.
  - [ ] Functions.
 
 ## Documentation.
