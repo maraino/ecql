@@ -30,6 +30,11 @@ func (m *Session) Del(i interface{}) error {
 	return result.Error(0)
 }
 
+func (m *Session) Exists(i interface{}) (bool, error) {
+	result := m.Called(i)
+	return result.Bool(0), result.Error(1)
+}
+
 func (m *Session) Select(i interface{}) ecql.Statement {
 	result := m.Called(i)
 	return result.Get(0).(ecql.Statement)

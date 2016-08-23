@@ -13,6 +13,7 @@ const (
 	insertQuery
 	deleteQuery
 	updateQuery
+	countQuery
 )
 
 // Table contains the information of a table in cassandra.
@@ -41,6 +42,8 @@ func (t *Table) BuildQuery(qt queryType) (string, error) {
 	case updateQuery:
 		// cql = "UPDATE %s WHERE %s = ?"
 		return "", ErrInvalidQueryType
+	case countQuery:
+		cql = fmt.Sprintf("SELECT COUNT(1) FROM %s WHERE %s", t.Name, appendCols(t.KeyColumns))
 	default:
 		return "", ErrInvalidQueryType
 	}

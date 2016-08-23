@@ -13,6 +13,7 @@ type Session interface {
 	Get(i interface{}, keys ...interface{}) error
 	Set(i interface{}) error
 	Del(i interface{}) error
+	Exists(i interface{}) (bool, error)
 	Select(i interface{}) Statement
 	Insert(i interface{}) Statement
 	Delete(i interface{}) Statement
@@ -77,6 +78,23 @@ func (s *SessionImpl) Del(i interface{}) error {
 			keys[i] = m[name]
 		}
 		return s.Query(cql, keys...).Exec()
+	}
+}
+
+// Exists executes a count statement on the table defined in i and
+// returns if the object i exists in the database.
+func (s *SessionImpl) Exists(i interface{}) (bool, error) {
+	m, table := MapTable(i)
+	if cql, err := table.BuildQuery(countQuery); err != nil {
+		return false, err
+	} else {
+		keys := make([]interface{}, len(table.KeyColumns))
+		for i, name := range table.KeyColumns {
+			keys[i] = m[name]
+		}
+		var count int
+		err = s.Query(cql, keys...).Scan(&count)
+		return count > 0, err
 	}
 }
 
