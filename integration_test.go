@@ -818,6 +818,42 @@ func TestBatch(t *testing.T) {
 	assert.NoError(t, err)
 }
 
+func TestRaw(t *testing.T) {
+	initialize(t)
+
+	var tw tweet
+
+	i := 0
+	iter := testSession.Select(tw).Where(Raw("token(id) > token(a5450908-17d7-11e6-b9ec-542696d5770f)")).Iter()
+	for iter.TypeScan(&tw) {
+		assert.Equal(t, "619f33d2-1952-11e6-9f53-542696d5770f", tw.ID.String())
+		i++
+	}
+	assert.NoError(t, iter.Close())
+	assert.Equal(t, 1, i)
+
+	i = 0
+	iter = testSession.Select(tw).Where(Raw("token(id) >= token(?)", MustUUID("a5450908-17d7-11e6-b9ec-542696d5770f"))).Iter()
+	for iter.TypeScan(&tw) {
+		switch i {
+		case 0:
+			assert.Equal(t, "a5450908-17d7-11e6-b9ec-542696d5770f", tw.ID.String())
+		case 1:
+			assert.Equal(t, "619f33d2-1952-11e6-9f53-542696d5770f", tw.ID.String())
+		}
+		i++
+	}
+	assert.NoError(t, iter.Close())
+	assert.Equal(t, 2, i)
+
+	iter = testSession.Select(tw).Where(
+		Raw("token(id) > token(?) AND token(id) < token(?)",
+			MustUUID("a5450908-17d7-11e6-b9ec-542696d5770f"),
+			MustUUID("619f33d2-1952-11e6-9f53-542696d5770f"))).Iter()
+	assert.False(t, iter.TypeScan(&tw))
+	assert.NoError(t, iter.Close())
+}
+
 func TestMain(m *testing.M) {
 	flag.Parse()
 

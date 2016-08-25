@@ -111,3 +111,16 @@ func ContainsKey(col string, v interface{}) Condition {
 		Values:      []interface{}{v},
 	}
 }
+
+// Raw allows to set the CQLFrament and Values of a condition. It allows to add
+// any not yet supported condition in a easy way.
+// 	Raw("token(partition_key) > token(?)", v.ID)
+// 	Raw("token(partition_key) > token('value')")
+// 	Raw("time > maxTimeuuid('2013-01-01 00:05+0000')")
+// 	Raw("time > maxTimeuuid(?) AND time < minTimeuuid(?)", maxTime, minTime)
+func Raw(fragment string, v ...interface{}) Condition {
+	return Condition{
+		CQLFragment: fragment,
+		Values:      v,
+	}
+}
