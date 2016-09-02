@@ -1,6 +1,9 @@
 package ecqltest
 
-import "github.com/betable/mock"
+import (
+	"github.com/betable/mock"
+	"github.com/maraino/ecql"
+)
 
 // Batch is a mock implementation of the Batch interface
 type Batch struct {
@@ -8,9 +11,9 @@ type Batch struct {
 }
 
 // Add is mocks a call to this method.
-func (m *Batch) Add(s ...Statement) Batch {
+func (m *Batch) Add(s ...ecql.Statement) ecql.Batch {
 	ret := m.Called(s)
-	ret0, _ := ret.Get(0).(Batch)
+	ret0, _ := ret.Get(0).(ecql.Batch)
 	return ret0
 }
 
