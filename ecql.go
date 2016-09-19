@@ -8,6 +8,8 @@ import (
 
 var EcqlDebug = (os.Getenv("ECQL_DEBUG") == "true")
 
+var ErrNotFound = gocql.ErrNotFound
+
 // Session is the interface used by users to interact with the database.
 type Session interface {
 	Get(i interface{}, keys ...interface{}) error
