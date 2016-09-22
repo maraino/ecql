@@ -82,7 +82,7 @@ func (s *StatementImpl) Scan(i ...interface{}) error {
 // Exec builds the query statement and executes it returning nil or the gocql
 // error. On DELETE and UPDATE statements, the behavior of Exec differs from
 // gocql if IfExists() is used, in this case, ecql will perform a ScanCAS and
-// return gocql.ErrNotFound if the query was not applied.
+// return ErrNotFound if the query was not applied.
 func (s *StatementImpl) Exec() error {
 	if query, err := s.query(); err != nil {
 		return err
@@ -92,7 +92,7 @@ func (s *StatementImpl) Exec() error {
 			if applied, err := query.ScanCAS(); err != nil {
 				return err
 			} else if applied == false {
-				return gocql.ErrNotFound
+				return ErrNotFound
 			}
 			return nil
 		}

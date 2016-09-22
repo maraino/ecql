@@ -141,14 +141,14 @@ func TestSelect(t *testing.T) {
 		assert.Equal(t, "ecql", u.ID)
 
 		err = testSession.Select(&u).Where(Eq("id", "ecql"), Contains("following", "zar")).TypeScan()
-		assert.Equal(t, gocql.ErrNotFound, err)
+		assert.Equal(t, ErrNotFound, err)
 
 		err = testSession.Select(&u).Where(Eq("id", "ecql"), ContainsKey("details", "handle")).TypeScan()
 		assert.NoError(t, err)
 		assert.Equal(t, "ecql", u.ID)
 
 		err = testSession.Select(&u).Where(Eq("id", "ecql"), ContainsKey("details", "github")).TypeScan()
-		assert.Equal(t, gocql.ErrNotFound, err)
+		assert.Equal(t, ErrNotFound, err)
 	}
 }
 
@@ -217,7 +217,7 @@ func TestInsert(t *testing.T) {
 	time.Sleep(2 * time.Second)
 	tw = tweet{}
 	err = testSession.Select(&tw).Where(Eq("id", newTW.ID)).TypeScan()
-	assert.Equal(t, gocql.ErrNotFound, err)
+	assert.Equal(t, ErrNotFound, err)
 
 	// With Timestamp
 	newTW.ID = gocql.TimeUUID()
@@ -247,7 +247,7 @@ func TestInsert(t *testing.T) {
 	time.Sleep(2 * time.Second)
 	tw = tweet{}
 	err = testSession.Select(&tw).Where(Eq("id", newTW.ID)).TypeScan()
-	assert.Equal(t, gocql.ErrNotFound, err)
+	assert.Equal(t, ErrNotFound, err)
 }
 
 func TestInsertColumns(t *testing.T) {
@@ -346,11 +346,11 @@ func TestDelete(t *testing.T) {
 	var tww tweet
 	var tll timeline
 	err = testSession.Get(&tww, newTW.ID)
-	assert.Error(t, gocql.ErrNotFound)
+	assert.Error(t, ErrNotFound)
 	assert.Zero(t, tww)
 
 	err = testSession.Get(&tll, newTL.ID, newTL.Time)
-	assert.Error(t, gocql.ErrNotFound)
+	assert.Error(t, ErrNotFound)
 	assert.Zero(t, tll)
 
 	// With Insert/Delete
@@ -385,11 +385,11 @@ func TestDelete(t *testing.T) {
 	assert.Equal(t, newTL, tl)
 
 	err = testSession.Select(&tww).Where(Eq("id", newTW.ID)).TypeScan()
-	assert.Error(t, gocql.ErrNotFound)
+	assert.Error(t, ErrNotFound)
 	assert.Zero(t, tww)
 
 	err = testSession.Select(&tll).Where(Eq("id", newTL.ID), Eq("time", newTL.Time)).TypeScan()
-	assert.Error(t, gocql.ErrNotFound)
+	assert.Error(t, ErrNotFound)
 	assert.Zero(t, tll)
 }
 
@@ -404,7 +404,7 @@ func TestDeleteAutoBinding(t *testing.T) {
 	assert.NoError(t, err)
 
 	err = testSession.Get(&tw, "a5450908-17d7-11e6-b9ec-542696d5770f")
-	assert.Error(t, gocql.ErrNotFound)
+	assert.Error(t, ErrNotFound)
 }
 
 func TestDeleteColumns(t *testing.T) {
@@ -434,14 +434,14 @@ func TestDeleteIfExists(t *testing.T) {
 	}
 
 	err := testSession.Delete(tw).IfExists().Exec()
-	assert.Equal(t, gocql.ErrNotFound, err)
+	assert.Equal(t, ErrNotFound, err)
 
 	tw.ID = MustUUID("a5450908-17d7-11e6-b9ec-542696d5770f")
 	err = testSession.Delete(tw).IfExists().Exec()
 	assert.NoError(t, err)
 
 	err = testSession.Get(&tw, "a5450908-17d7-11e6-b9ec-542696d5770f")
-	assert.Error(t, gocql.ErrNotFound)
+	assert.Error(t, ErrNotFound)
 }
 
 func TestDeleteUsingTimestamp(t *testing.T) {
@@ -503,7 +503,7 @@ func TestDeleteUsingTimestamp(t *testing.T) {
 
 	tw2 = tweet{}
 	err = testSession.Get(&tw2, "a5450908-17d7-11e6-b9ec-542696d5770f")
-	assert.Equal(t, gocql.ErrNotFound, err)
+	assert.Equal(t, ErrNotFound, err)
 }
 
 func TestUpdate(t *testing.T) {
@@ -728,7 +728,7 @@ func TestUpdateIfExists(t *testing.T) {
 	}
 
 	err := testSession.Update(tw).Set("text", "foobar tweet").IfExists().Exec()
-	assert.Equal(t, gocql.ErrNotFound, err)
+	assert.Equal(t, ErrNotFound, err)
 
 	tw.ID = MustUUID("a5450908-17d7-11e6-b9ec-542696d5770f")
 	err = testSession.Update(tw).Set("text", "foobar tweet").IfExists().Exec()
