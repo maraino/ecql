@@ -3,6 +3,7 @@ package ecql
 import (
 	"reflect"
 	"strings"
+	"sync"
 )
 
 var (
@@ -21,12 +22,42 @@ var (
 	TAG_KEY = "cqlkey"
 )
 
-var registry = make(map[reflect.Type]Table)
+var registry = newSyncRegistry()
+
+type syncRegistry struct {
+	sync.RWMutex
+	data map[reflect.Type]Table
+}
+
+func newSyncRegistry() *syncRegistry {
+	return &syncRegistry{
+		data: make(map[reflect.Type]Table),
+	}
+}
+
+func (r *syncRegistry) clear() {
+	r.Lock()
+	r.data = make(map[reflect.Type]Table)
+	r.Unlock()
+}
+
+func (r *syncRegistry) set(t reflect.Type, table Table) {
+	r.Lock()
+	r.data[t] = table
+	r.Unlock()
+}
+
+func (r *syncRegistry) get(t reflect.Type) (Table, bool) {
+	r.RLock()
+	table, ok := r.data[t]
+	r.RUnlock()
+	return table, ok
+}
 
 // Delete registry cleans the registry.
 // This would be mainly used in unit testing.
 func DeleteRegistry() {
-	registry = make(map[reflect.Type]Table)
+	registry.clear()
 }
 
 // Register adds the passed struct to the registry to be able to use gocql
@@ -69,7 +100,7 @@ func MapTable(i interface{}) (map[string]interface{}, Table) {
 	t := v.Type()
 
 	// Get the table or register on the fly if necessary
-	table, ok := registry[t]
+	table, ok := registry.get(t)
 	if !ok {
 		table = register(i)
 	}
@@ -99,7 +130,7 @@ func BindTable(i interface{}) ([]interface{}, map[string]interface{}, Table) {
 	t := v.Type()
 
 	// Get the table or register on the fly if necessary
-	table, ok := registry[t]
+	table, ok := registry.get(t)
 	if !ok {
 		table = register(i)
 	}
@@ -120,7 +151,7 @@ func GetTable(i interface{}) Table {
 	t := v.Type()
 
 	// Get the table or register on the fly if necessary
-	table, ok := registry[t]
+	table, ok := registry.get(t)
 	if !ok {
 		table = register(i)
 	}
@@ -180,6 +211,6 @@ func register(i interface{}) Table {
 		table.KeyColumns = []string{table.Columns[0].Name}
 	}
 
-	registry[t] = table
+	registry.set(t, table)
 	return table
 }

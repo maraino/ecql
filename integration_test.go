@@ -858,7 +858,7 @@ func TestMain(m *testing.M) {
 	flag.Parse()
 
 	var err error
-	cluster := gocql.NewCluster("localhost")
+	cluster := gocql.NewCluster("127.0.0.1")
 	sess, err := cluster.CreateSession()
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error connecting cassandra: %s\n", err.Error())

@@ -29,7 +29,7 @@ func TestRegister(t *testing.T) {
 	for _, tc := range tests {
 		DeleteRegistry()
 		Register(tc.I)
-		table, ok := registry[typ]
+		table, ok := registry.get(typ)
 		assert.True(t, ok)
 		assert.Equal(t, "mytable", table.Name)
 		assert.Equal(t, []string{"f1"}, table.KeyColumns)
