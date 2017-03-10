@@ -34,7 +34,7 @@ func (t *Table) BuildQuery(qt queryType) (string, error) {
 	var cql string
 	switch qt {
 	case selectQuery:
-		cql = fmt.Sprintf("SELECT * FROM %s WHERE %s", t.Name, appendCols(t.KeyColumns))
+		cql = fmt.Sprintf("SELECT %s FROM %s WHERE %s", t.getCols(), t.Name, appendCols(t.KeyColumns))
 	case insertQuery:
 		cql = fmt.Sprintf("INSERT INTO %s (%s) VALUES (%s)", t.Name, t.getCols(), t.getQms())
 	case deleteQuery:

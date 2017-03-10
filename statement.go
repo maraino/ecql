@@ -124,7 +124,7 @@ func (s *StatementImpl) BuildQuery() (string, []interface{}) {
 		if withColumnNames {
 			cql = append(cql, fmt.Sprintf("SELECT %s FROM %s", strings.Join(s.ColumnNames, ", "), s.Table.Name))
 		} else {
-			cql = append(cql, fmt.Sprintf("SELECT * FROM %s", s.Table.Name))
+			cql = append(cql, fmt.Sprintf("SELECT %s FROM %s", s.Table.getCols(), s.Table.Name))
 		}
 	case InsertCmd:
 		if withColumnNames {
