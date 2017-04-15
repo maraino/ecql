@@ -36,7 +36,7 @@ func TestRegister(t *testing.T) {
 		assert.Len(t, table.Columns, 4)
 		for i := range testStructNames {
 			assert.Equal(t, testStructNames[i], table.Columns[i].Name)
-			assert.Equal(t, i, table.Columns[i].Position)
+			assert.Equal(t, []int{i}, table.Columns[i].Position)
 		}
 	}
 }

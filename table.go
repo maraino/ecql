@@ -24,10 +24,11 @@ type Table struct {
 }
 
 // Column contains the information of a column in a table required
-// to create a map for it.
+// to create a map for it.  Every element of position represents an
+// anonymous nesting--with a single position representing an immediate named field
 type Column struct {
 	Name     string
-	Position int
+	Position []int
 }
 
 func (t *Table) BuildQuery(qt queryType) (string, error) {
