@@ -107,18 +107,7 @@ func MapTable(i interface{}) (map[string]interface{}, Table) {
 
 	columns := make(map[string]interface{})
 	for _, col := range table.Columns {
-		var field reflect.Value
-		for _, p := range col.Position {
-			field = v.Field(p)
-			next := field
-			if field.CanAddr() {
-				next = field.Addr()
-			}
-			if next.Kind() != reflect.Struct {
-				break
-			}
-			v = structOf(next.Interface())
-		}
+		field := v.Field(col.Position)
 		if field.CanAddr() {
 			columns[col.Name] = field.Addr().Interface()
 		} else {
@@ -149,19 +138,7 @@ func BindTable(i interface{}) ([]interface{}, map[string]interface{}, Table) {
 	columns := make([]interface{}, len(table.Columns))
 	mapping := make(map[string]interface{})
 	for i, col := range table.Columns {
-		var field reflect.Value
-		for _, p := range col.Position {
-			field = v.Field(p)
-			next := field
-			if field.CanAddr() {
-				next = field.Addr()
-			}
-			if next.Kind() != reflect.Struct {
-				break
-			}
-			v = structOf(next.Interface())
-		}
-
+		field := v.Field(col.Position)
 		columns[i] = field.Interface()
 		mapping[col.Name] = columns[i]
 	}
@@ -207,24 +184,6 @@ func register(i interface{}) Table {
 
 	for i, n := 0, t.NumField(); i < n; i++ {
 		field := t.Field(i)
-
-		// Embed fields from anonymous structs--but not at the expense of explicit tags
-		if field.Anonymous {
-			_, tt := MapTable(v.Field(i).Interface())
-			if len(tt.Name) > 0 && len(table.Name) == 0 {
-				table.Name = tt.Name
-			}
-			if len(tt.KeyColumns) > 0 && len(table.KeyColumns) == 0 {
-				table.KeyColumns = tt.KeyColumns
-			}
-			if len(tt.Columns) > 0 {
-				for _, col := range tt.Columns {
-					col.Position = append([]int{i}, col.Position...)
-					table.Columns = append(table.Columns, col)
-				}
-			}
-		}
-
 		// Get table if available
 		name := field.Tag.Get(TAG_TABLE)
 		if name != "" {
@@ -243,7 +202,7 @@ func register(i interface{}) Table {
 			name = strings.ToLower(field.Name)
 		}
 		if name != "-" {
-			table.Columns = append(table.Columns, Column{name, []int{i}})
+			table.Columns = append(table.Columns, Column{name, i})
 		}
 	}
 
