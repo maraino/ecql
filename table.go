@@ -25,10 +25,9 @@ type Table struct {
 
 // Column contains the information of a column in a table required
 // to create a map for it.
-// Every element of position represents its order in a hierarchy of nested structs
 type Column struct {
 	Name     string
-	Position []int
+	Position int
 }
 
 func (t *Table) BuildQuery(qt queryType) (string, error) {
