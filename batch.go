@@ -16,7 +16,7 @@ type BatchImpl struct {
 func NewBatch(sess *SessionImpl, typ gocql.BatchType) Batch {
 	return &BatchImpl{
 		session: sess,
-		batch:   gocql.NewBatch(typ),
+		batch:   sess.NewBatch(typ),
 	}
 }
 
